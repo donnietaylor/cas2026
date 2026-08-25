@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node (if any tooling creeps in)
+node_modules/
+
+# Secrets and local config
+.env
+*.env
+local.settings.json
+!*.env.example
+
+# Session 1 runtime
+mcp-for-everything/logs/
+mcp-for-everything/data/demo.db
+
+# Session 2 runtime
+smarter-monitoring/output/
+smarter-monitoring/**/incidents.ndjson
+smarter-monitoring/function/bin/
+smarter-monitoring/function/obj/
+
+# Editors / OS
+.vscode/*
+!.vscode/mcp.json
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,48 +1,103 @@
-# MCP for Everything: Turning Any Data Source into an AI-Ready Tool
+# MCP for Everything
 
-## Session Overview
+> You already know how to get the data. MCP is just a contract — and PowerShell can
+> sit on the other side of it.
 
-Model Context Protocol (MCP) has rapidly become the standard way to make data and systems usable by AI agents and developer tools. In this session, we'll walk through building an MCP server that exposes real-world sources such as databases, APIs, flat files, and even legacy systems. We will show how to query and use them directly from tools like VS Code and agent frameworks. You'll leave knowing how to make almost any system MCP-enabled and ready for modern AI workflows.
+A Python MCP host you write once and never touch again, with every tool written as an
+ordinary PowerShell 7 script. Drop a `.ps1` in `powershell/tools/` and it becomes an
+AI-callable tool. No SDK, no schema by hand, no restart.
 
-## What You'll Learn
+**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Security notes](./docs/security.md)**
 
-- What MCP is and why it matters for AI workflows
-- How to build an MCP server from scratch
-- Connecting MCP to real-world data sources:
-  - Relational databases (SQLite, PostgreSQL)
-  - REST APIs
-  - Flat files (CSV, JSON)
-  - Legacy systems
-- Using your MCP server with VS Code and agent frameworks
-- Best practices for MCP server design
+## How it works
 
-## Prerequisites
-
-- Node.js 18+ or Python 3.11+
-- Basic familiarity with REST APIs
-- A code editor (VS Code recommended)
-
-## Getting Started
-
-```bash
-cd src
-npm install       # or: pip install -r requirements.txt
-npm start         # or: python server.py
+```
+VS Code Copilot ─┐
+Claude Desktop   ├─ MCP / Streamable HTTP ─► FastAPI + uvicorn ─► pwsh ─► your estate
+python client   ─┘                            (~150 lines)        │
+                                                                  └─ tools/*.ps1
 ```
 
-## Demo Walkthrough
+The trick is that PowerShell already contains everything MCP needs to describe a tool:
 
-See the [`demos/`](./demos/) directory for step-by-step demo scripts used during the session.
+| PowerShell | becomes |
+|---|---|
+| `.SYNOPSIS` | tool description |
+| `[Parameter(Mandatory)]` | JSON Schema `required` |
+| `[string]` / `[int]` / `[datetime]` | JSON Schema `type` |
+| `[ValidateSet(...)]` | `enum` |
+| `[ValidateRange(1,5)]` | `minimum` / `maximum` |
+| `.PARAMETER` help | property `description` |
+| approved verb + `SupportsShouldProcess` | `readOnlyHint` / `destructiveHint` |
 
-1. [Demo 1 – Hello MCP: Your First Server](./demos/01-hello-mcp.md)
-2. [Demo 2 – Exposing a Database](./demos/02-database.md)
-3. [Demo 3 – Wrapping a REST API](./demos/03-rest-api.md)
-4. [Demo 4 – Flat Files as Tools](./demos/04-flat-files.md)
-5. [Demo 5 – Legacy System Integration](./demos/05-legacy.md)
-6. [Demo 6 – Using with VS Code and Agent Frameworks](./demos/06-agents.md)
+`Get-ToolManifest.ps1` reads it out; `_invoke.ps1` takes JSON on stdin, splats it into
+the real `param()` block, and returns one JSON envelope. Nothing is ever concatenated
+into a command line.
 
-## Resources
+## Quick start
 
-- [Model Context Protocol specification](https://spec.modelcontextprotocol.io)
-- [MCP SDK for TypeScript](https://github.com/modelcontextprotocol/typescript-sdk)
-- [MCP SDK for Python](https://github.com/modelcontextprotocol/python-sdk)
+```powershell
+cd host
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+cd ..
+
+.\Preflight.ps1        # check everything before you need it
+.\Start-Demo.ps1       # http://localhost:8931
+```
+
+Point VS Code at it with the included `.vscode/mcp.json`, open Copilot Chat in
+**Agent** mode, and ask it something.
+
+No Azure? `.\Start-Demo.ps1 -DemoMode` returns canned data for the cloud-backed tools.
+Everything else — legacy files, tickets, CIM — was always local.
+
+## Writing a tool
+
+That's the whole point: there is nothing to learn.
+
+```powershell
+#requires -Version 7.0
+
+<#
+.SYNOPSIS
+    What this tool does. The model reads this line.
+.PARAMETER Name
+    What this parameter is for.
+#>
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory, HelpMessage = 'What this parameter is for')]
+    [string]$Name
+)
+
+[PSCustomObject]@{ Result = "Hello $Name" }
+```
+
+Save it in `powershell/tools/`. It's live.
+
+**Three rules:**
+
+1. **Emit objects, never text.** `Write-Host` writes to a stream that would corrupt
+   the JSON envelope; the bridge suppresses it, so your output vanishes instead.
+2. **Leave a blank line between `#requires` and `<#`.** Without it PowerShell silently
+   stops parsing comment-based help and your tool ships with a useless description.
+   `Get-ToolManifest.ps1` will warn you, and `Preflight.ps1` fails on it.
+3. **Use an approved read-only verb** (`Get`, `Read`, `Search`, `Find`, `Test`,
+   `Measure`) unless the tool really does change something — in which case declare
+   `[CmdletBinding(SupportsShouldProcess)]` and expect it to be hidden until you
+   allowlist it.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `host/app.py` | FastAPI + MCP endpoint, tool browser, health |
+| `host/registry.py` | Manifest loading and hot reload |
+| `host/runner.py` | The pwsh subprocess bridge |
+| `host/security.py` | Allowlist, output fencing, audit log |
+| `powershell/Get-ToolManifest.ps1` | param blocks → JSON Schema |
+| `powershell/_invoke.ps1` | stdin JSON → splat → JSON envelope |
+| `powershell/tools/*.ps1` | The actual tools |
+| `data/` | Sample sources and offline fallbacks |
+| `fallback/` | Paste-ready scripts for when live typing goes sideways |

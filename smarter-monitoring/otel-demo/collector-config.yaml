@@ -1,0 +1,48 @@
+# The "we don't use Application Insights" path.
+#
+# Same spans, same trace IDs, different plumbing - which is the OpenTelemetry
+# neutrality argument actually earning its keep rather than just being a slide.
+#
+#   docker run -p 4317:4317 -p 4318:4318 \
+#     -v ${PWD}/collector-config.yaml:/etc/otelcol-contrib/config.yaml \
+#     otel/opentelemetry-collector-contrib:latest
+
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+
+processors:
+  # Only error spans reach the pipeline. Shipping every span into Event Hubs would
+  # be expensive and pointless - the pipeline correlates incidents, not traffic.
+  filter/errors-only:
+    error_mode: ignore
+    traces:
+      span:
+        - 'status.code != STATUS_CODE_ERROR'
+  batch:
+    timeout: 5s
+    send_batch_size: 50
+
+exporters:
+  # Event Hubs speaks Kafka on the Standard tier and above.
+  kafka:
+    brokers: ["<namespace>.servicebus.windows.net:9093"]
+    topic: monitoring-events
+    encoding: otlp_json
+    auth:
+      sasl:
+        mechanism: PLAIN
+        username: $$ConnectionString
+        password: "<event hub connection string>"
+      tls: { insecure: false }
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [filter/errors-only, batch]
+      exporters: [kafka, debug]

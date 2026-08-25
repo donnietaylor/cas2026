@@ -1,0 +1,39 @@
+{
+  "ComputerName": "WEB-01",
+  "QueriedAt": "2026-08-25 09:00:00Z",
+  "ServiceCount": 4,
+  "Services": [
+    {
+      "Name": "W3SVC",
+      "DisplayName": "World Wide Web Publishing Service",
+      "State": "Running",
+      "StartMode": "Auto",
+      "StartName": "LocalSystem",
+      "Unhealthy": false
+    },
+    {
+      "Name": "MSSQLSERVER",
+      "DisplayName": "SQL Server",
+      "State": "Running",
+      "StartMode": "Auto",
+      "StartName": "NT Service\\MSSQLSERVER",
+      "Unhealthy": false
+    },
+    {
+      "Name": "ContosoOrderSync",
+      "DisplayName": "Contoso Order Sync",
+      "State": "Stopped",
+      "StartMode": "Auto",
+      "StartName": "CONTOSO\\svc-ordersync",
+      "Unhealthy": true
+    },
+    {
+      "Name": "Spooler",
+      "DisplayName": "Print Spooler",
+      "State": "Stopped",
+      "StartMode": "Disabled",
+      "StartName": "LocalSystem",
+      "Unhealthy": false
+    }
+  ]
+}

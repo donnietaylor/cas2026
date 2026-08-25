@@ -1,0 +1,38 @@
+[
+  {
+    "ProductId": 1,
+    "Name": "Widget A",
+    "Category": "Widgets",
+    "UnitPrice": 9.99,
+    "QuantityOnHand": 12,
+    "ReorderPoint": 50,
+    "NeedsReorder": true
+  },
+  {
+    "ProductId": 2,
+    "Name": "Gadget B",
+    "Category": "Gadgets",
+    "UnitPrice": 24.99,
+    "QuantityOnHand": 140,
+    "ReorderPoint": 40,
+    "NeedsReorder": false
+  },
+  {
+    "ProductId": 3,
+    "Name": "Widget C",
+    "Category": "Widgets",
+    "UnitPrice": 14.99,
+    "QuantityOnHand": 8,
+    "ReorderPoint": 25,
+    "NeedsReorder": true
+  },
+  {
+    "ProductId": 4,
+    "Name": "Sprocket D",
+    "Category": "Sprockets",
+    "UnitPrice": 149.0,
+    "QuantityOnHand": 3,
+    "ReorderPoint": 10,
+    "NeedsReorder": true
+  }
+]

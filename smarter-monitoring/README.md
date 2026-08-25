@@ -1,44 +1,83 @@
-# Smarter Monitoring: Building an AI-Enhanced Event Pipeline
+# Smarter Monitoring
 
-## Session Overview
+> Correlate deterministically. Spend the AI only on the part that needs judgment.
 
-Monitoring and observability platforms generate endless alerts, but teams still have to hunt for the real problem. In this session, you'll see how to build an AI-enhanced event pipeline that turns raw telemetry from your monitoring and observability tools into actionable insight. We'll cover ingesting events from multiple sources, including environments that use OpenTelemetry, then correlating and enriching them with AI so downstream systems receive clear, prioritized incidents instead of noise, helping teams cut alert fatigue and respond faster.
+An event pipeline that takes Azure Monitor alerts, OpenTelemetry spans and
+third-party webhooks, and produces deduplicated, ServiceNow-shaped incidents.
 
-## What You'll Learn
+**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Azure setup](./docs/azure-setup.md)**
 
-- The challenge of alert fatigue and why AI can help
-- How to ingest events from multiple monitoring sources
-- Working with OpenTelemetry in your pipeline
-- Correlating and enriching events using AI
-- Producing clear, prioritized incidents for downstream systems
-- Practical patterns for reducing noise and improving response time
+## Architecture
 
-## Prerequisites
-
-- Python 3.11+ or Node.js 18+
-- Basic familiarity with observability concepts (metrics, logs, traces)
-- Docker (for running local dependencies)
-
-## Getting Started
-
-```bash
-cd src
-pip install -r requirements.txt   # or: npm install
-python pipeline.py                # or: node pipeline.js
+```
+Azure Monitor alerts ──┐
+OTel Collector / spans ─┼─► Event Hubs ─► PowerShell Function (Event Hub trigger)
+Third-party webhooks ──┘                        │
+                                    ┌───────────┴───────────┐
+                                    │ 1. normalize          │  one Event shape
+                                    │ 2. correlate          │  trace ID / resource ID
+                                    │ 3. ground             │  Resource Graph + KQL
+                                    │ 4. enrich             │  Azure OpenAI
+                                    │ 5. dedup + publish    │  fingerprint
+                                    └───────────┬───────────┘
+                                                ▼
+                                   ServiceNow-shaped incident
 ```
 
-## Demo Walkthrough
+**Step 2 is the one that matters.** On the recorded scenario it takes 14 events down
+to 5 groups with no model involved, because four of those events share an OTel trace
+ID and six share an Azure resource ID. Asking an LLM "are these related?" when the
+answer is already in the data is paying a model to do a `GROUP BY`.
 
-See the [`demos/`](./demos/) directory for step-by-step demo scripts used during the session.
+The model is asked one question, once per group: *given these correlated events and
+these grounding facts, what is the likely root cause and how urgent is it?* That is
+judgment, and it's worth a model.
 
-1. [Demo 1 – Ingesting Events from Multiple Sources](./demos/01-ingestion.md)
-2. [Demo 2 – OpenTelemetry Integration](./demos/02-otel.md)
-3. [Demo 3 – AI Correlation and Enrichment](./demos/03-ai-enrichment.md)
-4. [Demo 4 – Prioritized Incident Output](./demos/04-incidents.md)
-5. [Demo 5 – End-to-End Pipeline](./demos/05-end-to-end.md)
+## Quick start (no Azure needed)
 
-## Resources
+```powershell
+cd powershell
+.\Invoke-LocalPipeline.ps1 -Offline -ShowStages
+```
 
-- [OpenTelemetry documentation](https://opentelemetry.io/docs/)
-- [OpenTelemetry Python SDK](https://github.com/open-telemetry/opentelemetry-python)
-- [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+```
+[1] Ingested and normalized 14 events from 12 raw payloads.
+[2] Deterministic correlation: 14 events -> 5 groups (no AI involved).
+[3] AI enrichment (recorded): 5 groups -> 5 incidents.
+[4] Publishing to sinks...
+```
+
+Run it a second time and it publishes zero — fingerprint suppression working.
+
+Drop `-Offline` to call Azure OpenAI for real (set `AZURE_OPENAI_ENDPOINT` and
+`AZURE_OPENAI_DEPLOYMENT` first).
+
+## Layout
+
+| Path | What |
+|---|---|
+| `function/IngestBatch/` | Event Hub triggered entry point |
+| `powershell/modules/EventNormalizer.psm1` | Normalizers + **`Get-CorrelationKey`** |
+| `powershell/modules/Grounding.psm1` | Resource Graph, deployments, Log Analytics |
+| `powershell/modules/AiEnrichment.psm1` | Azure OpenAI with Structured Outputs |
+| `powershell/modules/IncidentSink.psm1` | ServiceNow payload, dedup, sinks |
+| `powershell/Invoke-LocalPipeline.ps1` | Local replay harness |
+| `powershell/Send-TestEvent.ps1` | Replay a scenario into the real Event Hub |
+| `otel-demo/` | Instrumented app + Collector config |
+| `data/scenario-web-outage.json` | The recorded outage, with recorded AI responses |
+
+## Design decisions worth defending
+
+- **The Event Hub batch is the correlation window.** No Durable Functions, no state
+  store. If you need a guaranteed wall-clock window, that's a Stream Analytics job in
+  front of the Function — not a timer inside it.
+- **Structured Outputs, not "please return JSON."** `strict: true` against a JSON
+  Schema. No fence-stripping, no parse in a try/catch that drops incidents at 3am.
+- **Degrade to dumb, never to quiet.** If Azure OpenAI is down, `New-UnenrichedIncident`
+  still raises a low-confidence ticket. A pipeline that drops events when the model is
+  unavailable fails silently during exactly the outages that take out the model.
+- **AI output is labelled as AI output.** `work_notes` is prefixed
+  `[AI-GENERATED ANALYSIS - confidence: x]`. Never launder a guess into a fact.
+- **`EventNormalizer.psm1` deliberately does not use `Set-StrictMode`.** It parses
+  JSON from systems that add and drop fields at will; a missing optional field must
+  degrade an event, not throw and drop the batch.

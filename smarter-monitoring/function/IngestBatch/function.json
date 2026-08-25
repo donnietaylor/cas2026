@@ -1,0 +1,14 @@
+{
+  "bindings": [
+    {
+      "type": "eventHubTrigger",
+      "name": "eventHubMessages",
+      "direction": "in",
+      "eventHubName": "monitoring-events",
+      "connection": "EVENTHUB_CONNECTION",
+      "consumerGroup": "$Default",
+      "cardinality": "many",
+      "dataType": "string"
+    }
+  ]
+}

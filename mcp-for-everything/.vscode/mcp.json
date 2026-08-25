@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "cas2026": {
+      "type": "http",
+      "url": "http://localhost:8931/mcp"
+    }
+  }
+}

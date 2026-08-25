@@ -1,0 +1,426 @@
+{
+  "name": "Web tier outage during afternoon peak",
+  "description": "12 raw payloads from Azure Monitor, OpenTelemetry and a third-party webhook, arriving over ~11 minutes.",
+  "groundingContext": {
+    "recentDeployments": [
+      {
+        "resource": "checkout-api",
+        "version": "2026.8.24.3",
+        "deployedAt": "2026-08-25T13:47:00Z",
+        "changes": "Order repository refactor; connection disposal moved to finally block"
+      }
+    ],
+    "topology": {
+      "appgw-prod": {
+        "backends": [
+          "vmss-web"
+        ]
+      },
+      "vmss-web": {
+        "dependsOn": [
+          "sql-prod-03"
+        ]
+      },
+      "checkout-api": {
+        "runsOn": "vmss-web",
+        "dependsOn": [
+          "payments-api",
+          "sql-prod-03"
+        ]
+      }
+    },
+    "resourceTags": {
+      "vmss-web": {
+        "owner": "platform-team",
+        "env": "prod"
+      },
+      "sql-prod-03": {
+        "owner": "data-team",
+        "env": "prod"
+      },
+      "backup-01": {
+        "owner": "infra",
+        "env": "prod"
+      }
+    }
+  },
+  "recordedEnrichment": {
+    "trace:4bf92f3577b34da6a3ce929d0e0e4736": {
+      "severity": "critical",
+      "title": "Checkout requests failing end-to-end on connection pool exhaustion",
+      "rootCause": "All three failing spans share one trace: checkout timed out waiting on payments, which failed on a reset connection, while the order insert hit an exhausted SQL connection pool. The 13:47 checkout-api deploy moved connection disposal into a finally block and is the most likely trigger.",
+      "recommendedAction": "Roll back checkout-api to 2026.8.24.2 and confirm pool utilisation on sql-prod-03 recovers. Do not scale the web tier - it is not the bottleneck.",
+      "confidence": "high"
+    },
+    "resource:/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Network/applicationGateways/appgw-prod": {
+      "severity": "critical",
+      "title": "Application Gateway serving 5xx with degraded backend pool",
+      "rootCause": "Backend health dropped below two healthy instances and the 5xx rate crossed 10%. Consistent with the checkout failures on vmss-web rather than an independent gateway fault.",
+      "recommendedAction": "Treat as a symptom of the checkout incident. Verify backend health recovers once checkout-api is rolled back.",
+      "confidence": "medium"
+    },
+    "resource:/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-web": {
+      "severity": "medium",
+      "title": "Sustained CPU and memory pressure on vmss-web",
+      "rootCause": "Three CPU alerts and one memory alert over ten minutes, all on the same scale set. Likely retry amplification from the failing checkout path rather than a genuine traffic increase.",
+      "recommendedAction": "Do not scale out yet. Re-evaluate after the checkout rollback; if pressure persists, then scale.",
+      "confidence": "medium"
+    },
+    "resource:/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-data/providers/Microsoft.Sql/servers/sql-prod-03/databases/orders": {
+      "severity": "high",
+      "title": "sql-prod-03 saturated: DTU, deadlocks and pool exhaustion",
+      "rootCause": "DTU above 90% with deadlocks and connection pool exhaustion on the orders database. Almost certainly the same root cause as the checkout failures - leaked connections from the 13:47 deploy.",
+      "recommendedAction": "Confirm active connection count. If it does not fall after the checkout-api rollback, fail over and open a data-team escalation.",
+      "confidence": "high"
+    },
+    "host:backup-01": {
+      "severity": "low",
+      "title": "Backup host running slow with disk filling",
+      "rootCause": "Disk at 82% and the nightly backup ran 70% over baseline. Unrelated to the checkout incident.",
+      "recommendedAction": "Schedule cleanup of old backup sets. No action needed tonight.",
+      "confidence": "medium"
+    }
+  },
+  "payloads": [
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/HTTP-5xx-Rate-High",
+            "alertRule": "HTTP-5xx-Rate-High",
+            "severity": "Sev1",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Network/applicationGateways/appgw-prod"
+            ],
+            "configurationItems": [
+              "appgw-prod"
+            ],
+            "originAlertId": "HTTP-5xx-Rate-High",
+            "firedDateTime": "2026-08-25T14:02:11Z",
+            "description": "Application Gateway 5xx rate exceeded 10% over 5 minutes"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/Backend-Health-Degraded",
+            "alertRule": "Backend-Health-Degraded",
+            "severity": "Sev1",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Network/applicationGateways/appgw-prod"
+            ],
+            "configurationItems": [
+              "appgw-prod"
+            ],
+            "originAlertId": "Backend-Health-Degraded",
+            "firedDateTime": "2026-08-25T14:02:44Z",
+            "description": "Fewer than 2 healthy backends"
+          }
+        }
+      }
+    },
+    {
+      "type": "otel",
+      "payload": {
+        "resourceSpans": [
+          {
+            "resource": {
+              "attributes": [
+                {
+                  "key": "service.name",
+                  "value": {
+                    "stringValue": "checkout-api"
+                  }
+                }
+              ]
+            },
+            "scopeSpans": [
+              {
+                "spans": [
+                  {
+                    "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+                    "spanId": "POST /ch",
+                    "name": "POST /checkout",
+                    "startTimeUnixNano": "1787630400000000000",
+                    "status": {
+                      "code": 2,
+                      "message": "upstream timeout calling payments"
+                    },
+                    "attributes": [
+                      {
+                        "key": "http.status_code",
+                        "value": {
+                          "intValue": 500
+                        }
+                      },
+                      {
+                        "key": "peer.service",
+                        "value": {
+                          "stringValue": "checkout-api"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+                    "spanId": "payments",
+                    "name": "payments.authorize",
+                    "startTimeUnixNano": "1787630401000000000",
+                    "status": {
+                      "code": 2,
+                      "message": "connection reset"
+                    },
+                    "attributes": [
+                      {
+                        "key": "http.status_code",
+                        "value": {
+                          "intValue": 500
+                        }
+                      },
+                      {
+                        "key": "peer.service",
+                        "value": {
+                          "stringValue": "payments-api"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+                    "spanId": "orders.d",
+                    "name": "orders.db.insert",
+                    "startTimeUnixNano": "1787630402000000000",
+                    "status": {
+                      "code": 2,
+                      "message": "timeout expired; pool exhausted"
+                    },
+                    "attributes": [
+                      {
+                        "key": "http.status_code",
+                        "value": {
+                          "intValue": 500
+                        }
+                      },
+                      {
+                        "key": "peer.service",
+                        "value": {
+                          "stringValue": "sql-prod-03"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/CPU-High",
+            "alertRule": "CPU-High",
+            "severity": "Sev3",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-web"
+            ],
+            "configurationItems": [
+              "vmss-web"
+            ],
+            "originAlertId": "CPU-High",
+            "firedDateTime": "2026-08-25T14:01:30Z",
+            "description": "Average CPU above 85% for 5 minutes"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/CPU-High",
+            "alertRule": "CPU-High",
+            "severity": "Sev3",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-web"
+            ],
+            "configurationItems": [
+              "vmss-web"
+            ],
+            "originAlertId": "CPU-High",
+            "firedDateTime": "2026-08-25T14:06:30Z",
+            "description": "Average CPU above 85% for 5 minutes"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/CPU-High",
+            "alertRule": "CPU-High",
+            "severity": "Sev3",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-web"
+            ],
+            "configurationItems": [
+              "vmss-web"
+            ],
+            "originAlertId": "CPU-High",
+            "firedDateTime": "2026-08-25T14:11:30Z",
+            "description": "Average CPU above 85% for 5 minutes"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/Memory-Pressure",
+            "alertRule": "Memory-Pressure",
+            "severity": "Sev3",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-web/providers/Microsoft.Compute/virtualMachineScaleSets/vmss-web"
+            ],
+            "configurationItems": [
+              "vmss-web"
+            ],
+            "originAlertId": "Memory-Pressure",
+            "firedDateTime": "2026-08-25T14:07:02Z",
+            "description": "Available memory below 10%"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/DTU-Consumption-High",
+            "alertRule": "DTU-Consumption-High",
+            "severity": "Sev2",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-data/providers/Microsoft.Sql/servers/sql-prod-03/databases/orders"
+            ],
+            "configurationItems": [
+              "orders"
+            ],
+            "originAlertId": "DTU-Consumption-High",
+            "firedDateTime": "2026-08-25T14:00:55Z",
+            "description": "DTU consumption above 90%"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/Deadlock-Detected",
+            "alertRule": "Deadlock-Detected",
+            "severity": "Sev2",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-data/providers/Microsoft.Sql/servers/sql-prod-03/databases/orders"
+            ],
+            "configurationItems": [
+              "orders"
+            ],
+            "originAlertId": "Deadlock-Detected",
+            "firedDateTime": "2026-08-25T14:03:20Z",
+            "description": "3 deadlocks in 5 minutes"
+          }
+        }
+      }
+    },
+    {
+      "type": "azure-monitor",
+      "payload": {
+        "schemaId": "azureMonitorCommonAlertSchema",
+        "data": {
+          "essentials": {
+            "alertId": "/subscriptions/.../alerts/Connection-Pool-Exhausted",
+            "alertRule": "Connection-Pool-Exhausted",
+            "severity": "Sev2",
+            "signalType": "Metric",
+            "monitorCondition": "Fired",
+            "monitoringService": "Platform",
+            "alertTargetIDs": [
+              "/subscriptions/00000000-1111-2222-3333-444444444444/resourceGroups/rg-prod-data/providers/Microsoft.Sql/servers/sql-prod-03/databases/orders"
+            ],
+            "configurationItems": [
+              "orders"
+            ],
+            "originAlertId": "Connection-Pool-Exhausted",
+            "firedDateTime": "2026-08-25T14:01:10Z",
+            "description": "Connection pool at capacity"
+          }
+        }
+      }
+    },
+    {
+      "type": "webhook",
+      "payload": {
+        "severity": "info",
+        "title": "DiskSpaceLow",
+        "host": "backup-01",
+        "description": "Volume D: is at 82% capacity"
+      }
+    },
+    {
+      "type": "webhook",
+      "payload": {
+        "severity": "info",
+        "title": "BackupJobSlow",
+        "host": "backup-01",
+        "description": "Nightly backup took 4h12m (baseline 2h30m)"
+      }
+    }
+  ]
+}

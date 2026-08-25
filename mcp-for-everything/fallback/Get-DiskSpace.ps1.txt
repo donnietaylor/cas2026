@@ -1,0 +1,28 @@
+#requires -Version 7.0
+
+<#
+.SYNOPSIS
+    Reports free disk space on a machine. Written live on stage in Demo 2.
+
+.PARAMETER MinFreePercent
+    Only return volumes with less than this percentage free.
+#>
+[CmdletBinding()]
+param(
+    [Parameter(HelpMessage = 'Only show volumes below this percent free')]
+    [ValidateRange(0, 100)]
+    [int]$MinFreePercent = 100
+)
+
+Get-PSDrive -PSProvider FileSystem |
+    Where-Object { $_.Used -and $_.Free } |
+    ForEach-Object {
+        $total = $_.Used + $_.Free
+        [PSCustomObject]@{
+            Drive       = $_.Name
+            FreeGB      = [math]::Round($_.Free / 1GB, 1)
+            TotalGB     = [math]::Round($total / 1GB, 1)
+            PercentFree = [math]::Round(($_.Free / $total) * 100, 1)
+        }
+    } |
+    Where-Object { $_.PercentFree -lt $MinFreePercent }

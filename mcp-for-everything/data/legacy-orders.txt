@@ -1,0 +1,15 @@
+REPORT: NIGHTLY ORDER EXTRACT          RUN 2026-08-17 02:00:14   PAGE 0001
+ORDER ID  CUSTOMER                    ORDERDATE STATUS    AMOUNT      REGION
+--------------------------------------------------------------------------------
+ORD-004417Contoso Manufacturing       2026-08-11SHIPPED   18450.00    CENTRAL   
+ORD-004418Fabrikam Residences         2026-08-12OPEN      2295.50     WEST      
+ORD-004419Northwind Traders           2026-08-12HELD      97300.25    EAST      
+ORD-004420Tailspin Toys               2026-08-13OPEN      640.00      CENTRAL   
+ORD-004421Adventure Works Cycles      2026-08-13CANCELLED 1180.75     WEST      
+ORD-004422Woodgrove Bank              2026-08-14HELD      54120.00    EAST      
+ORD-004423Proseware Inc               2026-08-14SHIPPED   8990.10     SOUTH     
+ORD-004424Litware Holdings            2026-08-15OPEN      233400.00   EAST      
+ORD-004425VanArsdel Ltd               2026-08-15SHIPPED   412.99      WEST      
+ORD-004426Relecloud Services          2026-08-16HELD      76500.00    CENTRAL   
+--------------------------------------------------------------------------------
+TOTAL RECORDS: 10

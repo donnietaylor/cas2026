@@ -1,0 +1,42 @@
+[
+  {
+    "Name": "vm-web-01",
+    "Type": "microsoft.compute/virtualmachines",
+    "Location": "eastus",
+    "ResourceGroup": "rg-prod-web",
+    "Owner": "platform-team",
+    "Environment": "prod"
+  },
+  {
+    "Name": "vm-web-02",
+    "Type": "microsoft.compute/virtualmachines",
+    "Location": "eastus",
+    "ResourceGroup": "rg-prod-web",
+    "Owner": "platform-team",
+    "Environment": "prod"
+  },
+  {
+    "Name": "sql-prod-03",
+    "Type": "microsoft.sql/servers",
+    "Location": "eastus",
+    "ResourceGroup": "rg-prod-data",
+    "Owner": "data-team",
+    "Environment": "prod"
+  },
+  {
+    "Name": "pip-orphaned-04",
+    "Type": "microsoft.network/publicipaddresses",
+    "Location": "eastus",
+    "ResourceGroup": "rg-legacy",
+    "Owner": "(untagged)",
+    "Environment": "(untagged)"
+  },
+  {
+    "Name": "kv-contoso-prod",
+    "Type": "microsoft.keyvault/vaults",
+    "Location": "eastus",
+    "ResourceGroup": "rg-prod-core",
+    "Owner": "security",
+    "Environment": "prod"
+  }
+]

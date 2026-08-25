@@ -1,0 +1,5 @@
+# Pinned, not floated. The MCP SDK moves fast and "it worked last week" is not
+# a demo strategy. Bump these deliberately, then re-run the smoke test.
+mcp==1.27.0
+fastapi==0.141.1
+uvicorn[standard]==0.34.0

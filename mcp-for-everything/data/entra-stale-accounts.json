@@ -1,0 +1,26 @@
+[
+  {
+    "DisplayName": "Marcus Webb",
+    "UserPrincipalName": "mwebb@contoso.com",
+    "UserType": "Member",
+    "Enabled": true,
+    "LastSignIn": "2026-01-14 08:12:00Z",
+    "DaysInactive": 223
+  },
+  {
+    "DisplayName": "Svc-LegacyBackup",
+    "UserPrincipalName": "svc-legacybackup@contoso.com",
+    "UserType": "Member",
+    "Enabled": true,
+    "LastSignIn": "never",
+    "DaysInactive": null
+  },
+  {
+    "DisplayName": "Dana Ruiz (Guest)",
+    "UserPrincipalName": "dana_ruiz#EXT#@contoso.com",
+    "UserType": "Guest",
+    "Enabled": true,
+    "LastSignIn": "2026-03-02 16:40:00Z",
+    "DaysInactive": 176
+  }
+]
