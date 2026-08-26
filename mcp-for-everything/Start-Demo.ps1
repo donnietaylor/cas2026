@@ -21,12 +21,12 @@ $ErrorActionPreference = 'Stop'
 $host_dir = Join-Path $PSScriptRoot 'host'
 
 if ($AllowWriteTools) {
-    $env:ALLOW_WRITE_TOOLS = 'true'
+    # One variable, naming one tool. There is no master switch to leave on.
     $env:WRITE_TOOL_ALLOWLIST = 'Restart-DemoService'
     Write-Host 'Write tools ENABLED (Restart-DemoService allowlisted).' -ForegroundColor Yellow
 }
 else {
-    $env:ALLOW_WRITE_TOOLS = 'false'
+    $env:WRITE_TOOL_ALLOWLIST = ''
 }
 
 if ($DemoMode) {
@@ -38,8 +38,8 @@ $env:PORT = $Port
 
 Push-Location $host_dir
 try {
-    Write-Host "Tool browser : http://localhost:$Port"      -ForegroundColor Cyan
-    Write-Host "MCP endpoint : http://localhost:$Port/mcp`n" -ForegroundColor Cyan
+    Write-Host "MCP endpoint : http://localhost:$Port/mcp"     -ForegroundColor Cyan
+    Write-Host "Health       : http://localhost:$Port/healthz`n" -ForegroundColor Cyan
     python -m uvicorn app:app --host 127.0.0.1 --port $Port
 }
 finally { Pop-Location }

@@ -14,7 +14,7 @@ AI-callable tool. No SDK, no schema by hand, no restart.
 ```
 VS Code Copilot ─┐
 Claude Desktop   ├─ MCP / Streamable HTTP ─► FastAPI + uvicorn ─► pwsh ─► your estate
-python client   ─┘                            (~150 lines)        │
+python client   ─┘                            (one 130-line file) │
                                                                   └─ tools/*.ps1
 ```
 
@@ -43,7 +43,7 @@ pip install -r requirements.txt
 cd ..
 
 .\Preflight.ps1        # check everything before you need it
-.\Start-Demo.ps1       # http://localhost:8931
+.\Start-Demo.ps1       # MCP endpoint on http://localhost:8931/mcp
 ```
 
 Point VS Code at it with the included `.vscode/mcp.json`, open Copilot Chat in
@@ -92,10 +92,7 @@ Save it in `powershell/tools/`. It's live.
 
 | Path | What |
 |---|---|
-| `host/app.py` | FastAPI + MCP endpoint, tool browser, health |
-| `host/registry.py` | Manifest loading and hot reload |
-| `host/runner.py` | The pwsh subprocess bridge |
-| `host/security.py` | Allowlist, output fencing, audit log |
+| `host/app.py` | **The entire Python host.** MCP endpoint, pwsh bridge, allowlist, audit |
 | `powershell/Get-ToolManifest.ps1` | param blocks → JSON Schema |
 | `powershell/_invoke.ps1` | stdin JSON → splat → JSON envelope |
 | `powershell/tools/*.ps1` | The actual tools |

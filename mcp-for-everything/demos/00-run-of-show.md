@@ -83,7 +83,9 @@ tools have to be written in TypeScript."*
 Show the script. It is a completely ordinary PowerShell script — `param()` block,
 comment-based help, `[PSCustomObject]` out. Nothing is imported. There is no SDK.
 
-Show the tool browser at <http://localhost:8931> on the projector. It's there.
+Run `.\Show-Manifest.ps1` on the projector. It's there.
+
+(The tool browser is a PowerShell one-liner over the same manifest the host reads. There is no web UI to maintain, which is rather the point.)
 
 Ask Copilot: *"greet me like a Texan"* → it picks `Style = 'Texan'` on its own,
 because the `[ValidateSet]` told it what the options were.
@@ -176,7 +178,7 @@ The verb isn't on the read-only list and the script declares `SupportsShouldProc
 > "PowerShell has had a permission model this whole time. Approved verbs and
 > ShouldProcess. We're just projecting it into MCP annotations."
 
-Restart with `ALLOW_WRITE_TOOLS=true` and an explicit allowlist. Now it appears, marked
+Restart with `.\Start-Demo.ps1 -AllowWriteTools`, which sets one env var naming this one tool. Now it appears, marked
 destructive. **Opt-in, per tool, by name.**
 
 **Act 2 — Injection.** Ask Copilot: *"Search the tickets for anything about
@@ -215,7 +217,7 @@ That's M+N instead of M×N, and it's the reason to care about the standard at al
 ## 8 · Close (3 min)
 
 - Everything is at `github.com/<you>/cas2026` — QR on the slide.
-- The whole Python host is ~150 lines and you never edit it again.
+- The whole Python host is one 130-line file and you never edit it again.
 - Adding a capability is: write a `.ps1`, save it.
 - The hard parts were never the protocol. They were identity, least privilege,
   and the audit log — the same hard parts as every integration you've ever shipped.
@@ -234,7 +236,7 @@ Last line:
 ```
 
 - [ ] `pwsh -v` is **7.x** (not 5.1 — `powershell.exe` is the wrong binary)
-- [ ] `http://localhost:8931/healthz` returns `problems: []`
+- [ ] `http://localhost:8931/healthz` lists every tool under `registered`
 - [ ] VS Code Copilot Chat in **Agent** mode, `cas2026` server showing green
 - [ ] `Connect-AzAccount` and `Connect-MgGraph` are live and not about to expire
 - [ ] Audit log cleared: `Remove-Item logs/audit.jsonl -ErrorAction SilentlyContinue`
