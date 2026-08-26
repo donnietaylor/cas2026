@@ -1,11 +1,13 @@
-# Smarter Monitoring
+# Smarter Monitoring: Building an AI-Enhanced Event Pipeline
 
 > Correlate deterministically. Spend the AI only on the part that needs judgment.
 
 An event pipeline that takes Azure Monitor alerts, OpenTelemetry spans and
 third-party webhooks, and produces deduplicated, ServiceNow-shaped incidents.
 
-**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Azure setup](./docs/azure-setup.md)**
+**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Azure setup](./docs/azure-setup.md)** · **[→ Slides](./slides/session2-smarter-monitoring.pptx)**
+
+Demo walkthroughs: [1 Ingest](./demos/01-ingestion.md) · [2 OpenTelemetry](./demos/02-otel.md) · [3 Correlation](./demos/03-correlation.md) · [4 Grounding](./demos/04-grounding.md) · [5 Enrichment](./demos/05-enrichment.md) · [6 Output](./demos/06-output.md)
 
 ## Architecture
 
@@ -65,6 +67,8 @@ Drop `-Offline` to call Azure OpenAI for real (set `AZURE_OPENAI_ENDPOINT` and
 | `powershell/Send-TestEvent.ps1` | Replay a scenario into the real Event Hub |
 | `otel-demo/` | Instrumented app + Collector config |
 | `data/scenario-web-outage.json` | The recorded outage, with recorded AI responses |
+| `Preflight.ps1` | Thirty-minutes-before checklist; verifies the offline path works |
+| `slides/build-session2.js` | Regenerates the deck (`node build-session2.js`) |
 
 ## Design decisions worth defending
 

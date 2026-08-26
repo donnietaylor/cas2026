@@ -1,4 +1,4 @@
-# MCP for Everything
+# MCP for Everything: Turning Any Data Source into an AI-Ready Tool
 
 > You already know how to get the data. MCP is just a contract — and PowerShell can
 > sit on the other side of it.

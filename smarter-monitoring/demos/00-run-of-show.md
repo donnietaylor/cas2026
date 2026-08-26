@@ -1,4 +1,5 @@
-# Run of Show — Smarter Monitoring
+# Run of Show — Session 2
+## Smarter Monitoring: Building an AI-Enhanced Event Pipeline
 
 **Slot:** 90 minutes · **Content:** ~65 min · **Q&A:** 25 min
 

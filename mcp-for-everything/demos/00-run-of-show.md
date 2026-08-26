@@ -1,4 +1,5 @@
-# Run of Show — MCP for Everything
+# Run of Show — Session 1
+## MCP for Everything: Turning Any Data Source into an AI-Ready Tool
 
 **Slot:** 90 minutes · **Content:** ~65 min · **Q&A:** 25 min
 

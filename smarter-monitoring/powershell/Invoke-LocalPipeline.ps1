@@ -21,14 +21,25 @@
 .PARAMETER ShowStages
     Print the intermediate stages - raw, normalized, correlated - not just the result.
 
+.PARAMETER PassThru
+    Emit a summary object describing the run. Everything else this script prints
+    goes to the host via Write-Host, which is deliberately not capturable - so if
+    you need to assert on a run (Preflight.ps1 does), use this rather than
+    scraping the console output.
+
 .EXAMPLE
     ./Invoke-LocalPipeline.ps1 -Scenario ../data/scenario-web-outage.json -Offline -ShowStages
+
+.EXAMPLE
+    $run = ./Invoke-LocalPipeline.ps1 -Offline -PassThru 6> $null
+    $run.IncidentsPublished
 #>
 [CmdletBinding()]
 param(
     [string]$Scenario = (Join-Path $PSScriptRoot '..' 'data' 'scenario-web-outage.json'),
     [switch]$Offline,
-    [switch]$ShowStages
+    [switch]$ShowStages,
+    [switch]$PassThru
 )
 
 $ErrorActionPreference = 'Stop'
@@ -141,3 +152,16 @@ Write-Host ("  {0} raw payloads -> {1} events -> {2} groups -> {3} incidents pub
         $data.payloads.Count, $events.Count, $groups.Count, $published) -ForegroundColor Magenta
 Write-Host ('-' * 68)
 Write-Host ''
+
+if ($PassThru) {
+    [PSCustomObject]@{
+        Scenario           = $data.name
+        RawPayloads        = $data.payloads.Count
+        Events             = $events.Count
+        Groups             = $groups.Count
+        Incidents          = $incidents.Count
+        IncidentsPublished = $published
+        Mode               = $mode
+        Severities         = @($ordered.Severity)
+    }
+}
