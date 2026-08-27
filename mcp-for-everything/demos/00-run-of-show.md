@@ -217,7 +217,7 @@ That's M+N instead of M×N, and it's the reason to care about the standard at al
 ## 8 · Close (3 min)
 
 - Everything is at `github.com/<you>/cas2026` — QR on the slide.
-- The whole Python host is one 130-line file and you never edit it again.
+- The whole Python host is one 145-line file and you never edit it again.
 - Adding a capability is: write a `.ps1`, save it.
 - The hard parts were never the protocol. They were identity, least privilege,
   and the audit log — the same hard parts as every integration you've ever shipped.

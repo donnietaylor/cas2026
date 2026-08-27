@@ -7,14 +7,14 @@ A Python MCP host you write once and never touch again, with every tool written 
 ordinary PowerShell 7 script. Drop a `.ps1` in `powershell/tools/` and it becomes an
 AI-callable tool. No SDK, no schema by hand, no restart.
 
-**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Security notes](./docs/security.md)**
+**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Security notes](./docs/security.md)** · **[→ Slides](./slides/session1-mcp-for-everything.pptx)**
 
 ## How it works
 
 ```
 VS Code Copilot ─┐
 Claude Desktop   ├─ MCP / Streamable HTTP ─► FastAPI + uvicorn ─► pwsh ─► your estate
-python client   ─┘                            (one 130-line file) │
+python client   ─┘                            (one 145-line file)  │
                                                                   └─ tools/*.ps1
 ```
 
@@ -98,3 +98,4 @@ Save it in `powershell/tools/`. It's live.
 | `powershell/tools/*.ps1` | The actual tools |
 | `data/` | Sample sources and offline fallbacks |
 | `fallback/` | Paste-ready scripts for when live typing goes sideways |
+| `slides/build-session1.js` | Regenerates the deck (`node build-session1.js`) |

@@ -11,7 +11,7 @@ model shows up where judgment is genuinely required, and nowhere else.
 
 ## Session 1 — MCP for Everything: Turning Any Data Source into an AI-Ready Tool
 
-A Python MCP host that is one 130-line file you never touch again, with every
+A Python MCP host that is one 145-line file you never touch again, with every
 actual tool written in **PowerShell 7**. Drop a `.ps1` in a folder and it becomes an
 AI-callable tool — schema, validation, and read-only/destructive classification all
 derived from the `param()` block you already know how to write.
