@@ -30,3 +30,6 @@ smarter-monitoring/function/obj/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Session 2 infra output (contains an Event Hubs key)
+smarter-monitoring/infra/demo-env.ps1

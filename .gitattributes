@@ -1,0 +1,40 @@
+# Line endings are decided here, not by whatever core.autocrlf happens to be on
+# each machine. Without this, git rewrites endings on checkout and warns on
+# every add ("LF will be replaced by CRLF in ...").
+#
+# LF, not CRLF, and not only for tidiness: the function/ folder is zipped and
+# run on a Linux Functions host. Keeping the working tree as LF means what runs
+# in Azure is byte-for-byte what is in the repo.
+
+* text=auto eol=lf
+
+*.ps1    text eol=lf
+*.psm1   text eol=lf
+*.psd1   text eol=lf
+*.py     text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.html   text eol=lf
+*.css    text eol=lf
+*.js     text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# These genuinely want CRLF - cmd.exe misparses LF-only batch files.
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+
+# Never rewritten.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.docx   binary
+*.xlsx   binary
+*.pptx   binary

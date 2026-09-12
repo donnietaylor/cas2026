@@ -1,0 +1,339 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "name": "header",
+      "content": {
+        "json": "# Monitoring pipeline\nOpenTelemetry &nbsp;&bull;&nbsp; Azure Monitor &nbsp;&bull;&nbsp; twelve third-party tools &nbsp;&rarr;&nbsp; one Event Hub &nbsp;&rarr;&nbsp; correlated incidents"
+      }
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\": \"CustomEndpoint/1.0\", \"data\": null, \"headers\": [], \"method\": \"GET\", \"url\": \"https://func-cas26-193812.azurewebsites.net/api/incidents?view=summary\", \"batchDisabled\": false, \"transformers\": [{\"type\": \"jsonpath\", \"settings\": {\"tablePath\": \"$\", \"columns\": [{\"path\": \"$.Label\", \"columnid\": \"Label\", \"columnType\": \"string\"}, {\"path\": \"$.Value\", \"columnid\": \"Value\", \"columnType\": \"string\"}, {\"path\": \"$.Tone\", \"columnid\": \"Tone\", \"columnType\": \"string\"}, {\"path\": \"$.Sort\", \"columnid\": \"Sort\", \"columnType\": \"number\"}]}}]}",
+        "queryType": 10,
+        "size": 1,
+        "visualization": "tiles",
+        "tileSettings": {
+          "leftContent": {
+            "columnMatch": "Tone",
+            "formatter": 18,
+            "formatOptions": {
+              "thresholdsOptions": "icons",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "bad",
+                  "representation": "Sev0",
+                  "text": "{0}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "warn",
+                  "representation": "Sev2",
+                  "text": "{0}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "good",
+                  "representation": "success",
+                  "text": "{0}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "info",
+                  "representation": "Sev3",
+                  "text": "{0}"
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "Sev4",
+                  "text": "{0}"
+                }
+              ]
+            }
+          },
+          "titleContent": {
+            "columnMatch": "Value",
+            "formatter": 1
+          },
+          "subtitleContent": {
+            "columnMatch": "Label",
+            "formatter": 1
+          },
+          "showBorder": true,
+          "size": "auto",
+          "sortOrderField": 1,
+          "sortCriteriaField": "Sort"
+        }
+      },
+      "name": "counters"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\": \"CustomEndpoint/1.0\", \"data\": null, \"headers\": [], \"method\": \"GET\", \"url\": \"https://func-cas26-193812.azurewebsites.net/api/incidents?view=graph\", \"batchDisabled\": false, \"transformers\": [{\"type\": \"jsonpath\", \"settings\": {\"tablePath\": \"$\", \"columns\": [{\"path\": \"$.Id\", \"columnid\": \"Id\", \"columnType\": \"string\"}, {\"path\": \"$.Label\", \"columnid\": \"Label\", \"columnType\": \"string\"}, {\"path\": \"$.Role\", \"columnid\": \"Role\", \"columnType\": \"string\"}, {\"path\": \"$.Severity\", \"columnid\": \"Severity\", \"columnType\": \"string\"}, {\"path\": \"$.Events\", \"columnid\": \"Events\", \"columnType\": \"number\"}, {\"path\": \"$.Symptoms\", \"columnid\": \"Symptoms\", \"columnType\": \"number\"}, {\"path\": \"$.SourceId\", \"columnid\": \"SourceId\", \"columnType\": \"string\"}, {\"path\": \"$.TargetId\", \"columnid\": \"TargetId\", \"columnType\": \"string\"}]}}]}",
+        "queryType": 10,
+        "size": 3,
+        "title": "What caused what",
+        "visualization": "graph",
+        "graphSettings": {
+          "type": 1,
+          "topContent": {
+            "columnMatch": "Role",
+            "formatter": 1
+          },
+          "centerContent": {
+            "columnMatch": "Events",
+            "formatter": 1
+          },
+          "bottomContent": {
+            "columnMatch": "Label",
+            "formatter": 1
+          },
+          "nodeIdField": "Id",
+          "sourceIdField": "SourceId",
+          "targetIdField": "TargetId",
+          "graphOrientation": 3,
+          "showOrientationToggles": true,
+          "nodeSize": "Events",
+          "staticNodeSize": 110,
+          "hivesMargin": 5,
+          "colorSettings": {
+            "nodeColorField": "Severity",
+            "type": "thresholds",
+            "thresholdsGrid": [
+              {
+                "operator": "==",
+                "thresholdValue": "critical",
+                "representation": "red"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "error",
+                "representation": "orange"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "warning",
+                "representation": "yellow"
+              },
+              {
+                "operator": "==",
+                "thresholdValue": "normal",
+                "representation": "gray"
+              },
+              {
+                "operator": "Default",
+                "thresholdValue": null,
+                "representation": "blue"
+              }
+            ]
+          }
+        }
+      },
+      "name": "journey"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\": \"CustomEndpoint/1.0\", \"data\": null, \"headers\": [], \"method\": \"GET\", \"url\": \"https://func-cas26-193812.azurewebsites.net/api/incidents?view=incidents\", \"batchDisabled\": false, \"transformers\": [{\"type\": \"jsonpath\", \"settings\": {\"tablePath\": \"$\", \"columns\": [{\"path\": \"$.IncidentId\", \"columnid\": \"IncidentId\", \"columnType\": \"string\"}, {\"path\": \"$.Severity\", \"columnid\": \"Severity\", \"columnType\": \"string\"}, {\"path\": \"$.SeverityRank\", \"columnid\": \"SeverityRank\", \"columnType\": \"number\"}, {\"path\": \"$.Headline\", \"columnid\": \"Headline\", \"columnType\": \"string\"}, {\"path\": \"$.Where\", \"columnid\": \"Where\", \"columnType\": \"string\"}, {\"path\": \"$.Tools\", \"columnid\": \"Tools\", \"columnType\": \"string\"}, {\"path\": \"$.Stats\", \"columnid\": \"Stats\", \"columnType\": \"string\"}, {\"path\": \"$.Status\", \"columnid\": \"Status\", \"columnType\": \"string\"}, {\"path\": \"$.EventCount\", \"columnid\": \"EventCount\", \"columnType\": \"number\"}, {\"path\": \"$.SymptomCount\", \"columnid\": \"SymptomCount\", \"columnType\": \"number\"}, {\"path\": \"$.CorrelatedOn\", \"columnid\": \"CorrelatedOn\", \"columnType\": \"string\"}, {\"path\": \"$.LastSeen\", \"columnid\": \"LastSeen\", \"columnType\": \"string\"}, {\"path\": \"$.Assessment\", \"columnid\": \"Assessment\", \"columnType\": \"string\"}, {\"path\": \"$.RootCause\", \"columnid\": \"RootCause\", \"columnType\": \"string\"}, {\"path\": \"$.RecommendedAction\", \"columnid\": \"RecommendedAction\", \"columnType\": \"string\"}, {\"path\": \"$.Confidence\", \"columnid\": \"Confidence\", \"columnType\": \"string\"}, {\"path\": \"$.ParentIncidentId\", \"columnid\": \"ParentIncidentId\", \"columnType\": \"string\"}]}}]}",
+        "queryType": 10,
+        "size": 3,
+        "title": "Incidents",
+        "visualization": "tiles",
+        "tileSettings": {
+          "leftContent": {
+            "columnMatch": "Severity",
+            "formatter": 18,
+            "formatOptions": {
+              "thresholdsOptions": "icons",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "critical",
+                  "representation": "Sev0",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "error",
+                  "representation": "Sev1",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "warning",
+                  "representation": "Sev2",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "info",
+                  "representation": "Sev3",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": "==",
+                  "thresholdValue": "normal",
+                  "representation": "success",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "Sev4",
+                  "text": "{0}{1}"
+                }
+              ]
+            }
+          },
+          "titleContent": {
+            "columnMatch": "Headline",
+            "formatter": 1
+          },
+          "subtitleContent": {
+            "columnMatch": "Stats",
+            "formatter": 1
+          },
+          "secondaryContent": {
+            "columnMatch": "Status",
+            "formatter": 1
+          },
+          "showBorder": true,
+          "size": "auto",
+          "sortOrderField": 2,
+          "sortCriteriaField": "SeverityRank"
+        }
+      },
+      "name": "incidents"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "{\"version\": \"CustomEndpoint/1.0\", \"data\": null, \"headers\": [], \"method\": \"GET\", \"url\": \"https://func-cas26-193812.azurewebsites.net/api/incidents?view=symptoms\", \"batchDisabled\": false, \"transformers\": [{\"type\": \"jsonpath\", \"settings\": {\"tablePath\": \"$\", \"columns\": [{\"path\": \"$.IncidentId\", \"columnid\": \"IncidentId\", \"columnType\": \"string\"}, {\"path\": \"$.Incident\", \"columnid\": \"Incident\", \"columnType\": \"string\"}, {\"path\": \"$.Severity\", \"columnid\": \"Severity\", \"columnType\": \"string\"}, {\"path\": \"$.SeverityRank\", \"columnid\": \"SeverityRank\", \"columnType\": \"number\"}, {\"path\": \"$.Tool\", \"columnid\": \"Tool\", \"columnType\": \"string\"}, {\"path\": \"$.Host\", \"columnid\": \"Host\", \"columnType\": \"string\"}, {\"path\": \"$.Symptom\", \"columnid\": \"Symptom\", \"columnType\": \"string\"}, {\"path\": \"$.Seen\", \"columnid\": \"Seen\", \"columnType\": \"number\"}, {\"path\": \"$.Source\", \"columnid\": \"Source\", \"columnType\": \"string\"}, {\"path\": \"$.Detail\", \"columnid\": \"Detail\", \"columnType\": \"string\"}, {\"path\": \"$.LastSeen\", \"columnid\": \"LastSeen\", \"columnType\": \"string\"}]}}]}",
+        "queryType": 10,
+        "size": 2,
+        "title": "What actually fired",
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Severity",
+              "formatter": 18,
+              "formatOptions": {
+                "thresholdsOptions": "icons",
+                "thresholdsGrid": [
+                  {
+                    "operator": "==",
+                    "thresholdValue": "critical",
+                    "representation": "Sev0",
+                    "text": "{0}{1}"
+                  },
+                  {
+                    "operator": "==",
+                    "thresholdValue": "error",
+                    "representation": "Sev1",
+                    "text": "{0}{1}"
+                  },
+                  {
+                    "operator": "==",
+                    "thresholdValue": "warning",
+                    "representation": "Sev2",
+                    "text": "{0}{1}"
+                  },
+                  {
+                    "operator": "==",
+                    "thresholdValue": "info",
+                    "representation": "Sev3",
+                    "text": "{0}{1}"
+                  },
+                  {
+                    "operator": "==",
+                    "thresholdValue": "normal",
+                    "representation": "success",
+                    "text": "{0}{1}"
+                  },
+                  {
+                    "operator": "Default",
+                    "thresholdValue": null,
+                    "representation": "Sev4",
+                    "text": "{0}{1}"
+                  }
+                ]
+              }
+            },
+            {
+              "columnMatch": "Seen",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "blue",
+                "aggregation": "Sum"
+              }
+            },
+            {
+              "columnMatch": "IncidentId",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "SeverityRank",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Detail",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "LastSeen",
+              "formatter": 5
+            },
+            {
+              "columnMatch": "Source",
+              "formatter": 5
+            }
+          ],
+          "rowLimit": 500,
+          "filter": true,
+          "hierarchySettings": {
+            "treeType": 1,
+            "groupBy": [
+              "Incident"
+            ],
+            "expandTopLevel": false
+          },
+          "labelSettings": [
+            {
+              "columnId": "Incident",
+              "label": "Incident"
+            },
+            {
+              "columnId": "Tool",
+              "label": "Reported by"
+            },
+            {
+              "columnId": "Symptom",
+              "label": "What happened"
+            },
+            {
+              "columnId": "Seen",
+              "label": "Times seen"
+            }
+          ]
+        }
+      },
+      "name": "symptoms"
+    }
+  ],
+  "styleSettings": {
+    "paddingStyle": "wide",
+    "spacingStyle": "wide"
+  },
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
