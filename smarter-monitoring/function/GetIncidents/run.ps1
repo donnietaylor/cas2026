@@ -3,14 +3,16 @@ using namespace System.Net
 param($Request, $TriggerMetadata)
 
 <#
-    GET /api/incidents?view=summary|graph|incidents|symptoms&hours=2
+    GET /api/incidents?view=raw|summary|sources|tree|incidents|symptoms&hours=2
 
-    Four shapes, one per visual on the workbook:
+    Shapes, one per visual on the workbook:
 
-      summary    one big number each - the counters strip
-      graph      nodes and edges - the causality picture
-      incidents  one row per incident, with display strings already composed
-      symptoms   one row per symptom, carrying its incident's fields (default)
+      raw        every event as it arrived, nothing merged - the firehose
+      summary    the funnel - four numbers, one per stage of the pipeline
+      sources    events per reporting tool, for the bar chart
+      tree       cause -> incident -> symptom, flat rows for a grouped grid
+      incidents  one row per incident (tiles)
+      symptoms   one row per symptom (default)
 
     This endpoint decides the presentation. Workbooks color and lay out what they
     are given; they are bad at composing text. So anything the story needs said -
@@ -92,85 +94,162 @@ catch {
     return
 }
 
+# --- raw: the firehose, before any of this happened --------------------------
+# Deliberately unhelpful. No grouping, no counts, no severity ordering - just
+# what arrived, newest first, the way it lands in a console at 3am. This is the
+# "can you spot the cause" screen, and it only works if it is genuinely hard to
+# read.
+if ($view -eq 'raw') {
+    $bucket = [DateTime]::UtcNow.AddHours(-$hours).ToString('yyyyMMddHHmm')
+    $filter = [uri]::EscapeDataString("PartitionKey ge '$bucket'")
+    $arrived = @((Invoke-Table -Method Get -Path "RawEvents()?`$filter=$filter").value)
+
+    $rows = $arrived |
+        Sort-Object { (ConvertTo-Utc $_.Time) } -Descending |
+        Select-Object -First 500 |
+        ForEach-Object {
+            [ordered]@{
+                Time     = (ConvertTo-Utc $_.Time).ToLocalTime().ToString('HH:mm:ss')
+                Severity = "$($_.Severity)"
+                Source   = "$($_.Source)"
+                Tool     = "$($_.Tool)"
+                Host     = "$(if ($_.Host) { $_.Host } else { $_.Tool })"
+                Event    = "$($_.Title)"
+                Detail   = "$($_.Message)"
+            }
+        }
+
+    if (-not $rows) {
+        $rows = @([ordered]@{
+                Time = ''; Severity = 'normal'; Source = ''; Tool = ''; Host = ''
+                Event = "Nothing has arrived in the last $hours hour(s)"; Detail = ''
+            })
+    }
+    Write-Json @($rows)
+    return
+}
+
 # --- summary: the counters strip -------------------------------------------
 if ($view -eq 'summary') {
     $eventTotal = ($incidents | Measure-Object EventCount -Sum).Sum
     $symptomTotal = ($incidents | Measure-Object SymptomCount -Sum).Sum
-    $criticalCount = @($incidents | Where-Object { "$($_.Severity)" -in 'critical', 'error' }).Count
     # Distinct causes, not incidents carrying one. Seven incidents sharing two
-    # root causes is "2 root causes found" - counting incidents would print 7 and
+    # root causes is "2 root causes" - counting incidents would print 7 and
     # quietly turn the headline number into a restatement of "open incidents".
     $causeCount = @($incidents | ForEach-Object { "$($_.RootCause)" } |
             Where-Object { $_ } | Select-Object -Unique).Count
-    $hostCount = @($allSymptoms | ForEach-Object { "$($_.Host)" } | Where-Object { $_ } | Select-Object -Unique).Count
 
-    # Tone is a separate column so the tile can be colored by something other
-    # than the number it displays. Thresholds evaluate the column they are on,
-    # and "12" is not intrinsically good or bad.
+    # The funnel, in the order the pipeline does the work. Every number is
+    # smaller than the one before it, and that shrinking is the whole argument:
+    # raw events, then what is actually distinct, then what is actually one
+    # problem, then what to go and fix. Tone drives the tile colour, since
+    # thresholds evaluate the column they sit on and "13" is not good or bad.
     Write-Json @(
         @{ Label = 'Events ingested'; Value = "$([int]$eventTotal)"; Tone = 'info'; Sort = 1 }
-        @{ Label = 'Distinct symptoms'; Value = "$([int]$symptomTotal)"; Tone = 'info'; Sort = 2 }
-        @{ Label = 'Open incidents'; Value = "$($incidents.Count)"; Tone = $(if ($incidents.Count) { 'warn' } else { 'good' }); Sort = 3 }
-        @{ Label = 'Needing attention'; Value = "$criticalCount"; Tone = $(if ($criticalCount) { 'bad' } else { 'good' }); Sort = 4 }
-        @{ Label = 'Root causes found'; Value = "$causeCount"; Tone = $(if ($causeCount) { 'good' } else { 'info' }); Sort = 5 }
-        @{ Label = 'Hosts reporting'; Value = "$hostCount"; Tone = 'info'; Sort = 6 }
+        @{ Label = 'Unique symptoms'; Value = "$([int]$symptomTotal)"; Tone = 'info'; Sort = 2 }
+        @{ Label = 'Correlated incidents'; Value = "$($incidents.Count)"; Tone = $(if ($incidents.Count) { 'warn' } else { 'good' }); Sort = 3 }
+        @{ Label = 'Root causes'; Value = "$causeCount"; Tone = $(if ($causeCount) { 'good' } else { 'info' }); Sort = 4 }
     )
     return
 }
 
-# --- graph: the causality picture -------------------------------------------
-# One row per incident. A row carries its node and, where it has one, the edge
-# pointing at it from its cause. Incidents the AI reviewed and left alone are
-# hung off a single grey hub: a workbook graph draws edges, so an unconnected
-# node has nothing to render and the red herrings - the most interesting thing
-# on the picture - would silently vanish.
-if ($view -eq 'graph') {
+# --- sources: what reported, and how loudly ---------------------------------
+if ($view -eq 'sources') {
+    $rows = $allSymptoms | Group-Object { "$($_.Service)" } | Where-Object { $_.Name } |
+        ForEach-Object {
+            @{
+                Tool   = $_.Name
+                Events = [int](($_.Group | Measure-Object Count -Sum).Sum)
+            }
+        } | Sort-Object { $_.Events } -Descending
+
+    if (-not $rows) { $rows = @(@{ Tool = 'nothing reporting'; Events = 0 }) }
+    Write-Json @($rows)
+    return
+}
+
+# --- tree: cause -> incident -> symptom -------------------------------------
+# One row per symptom, carrying the two labels the grid groups on. Flat, because
+# a workbook grid builds its own tree from repeated column values - the grouped
+# columns are then hidden, so the repetition never reaches the screen.
+if ($view -eq 'tree') {
     $rows = [System.Collections.Generic.List[object]]::new()
-    $hub = 'reviewed-unrelated'
-    $loose = 0
 
+    # Cause first, then its downstream incidents, then everything reviewed and
+    # left alone. Grids preserve the order they are given.
+    $byId = @{}
+    foreach ($incident in $incidents) { $byId["$($incident.RowKey)"] = $incident }
+
+    $causes = @($ordered | Where-Object { $_.RootCause -and -not $_.ParentIncidentId })
+    $order = [System.Collections.Generic.List[object]]::new()
+    $placed = @{}
+
+    foreach ($cause in $causes) {
+        $order.Add(@{ Incident = $cause; Cause = $cause; Rank = 0 })
+        $placed["$($cause.RowKey)"] = $true
+        foreach ($child in ($ordered | Where-Object { "$($_.ParentIncidentId)" -eq "$($cause.RowKey)" })) {
+            $order.Add(@{ Incident = $child; Cause = $cause; Rank = 1 })
+            $placed["$($child.RowKey)"] = $true
+        }
+    }
     foreach ($incident in $ordered) {
-        $id = "$($incident.RowKey)"
-        $label = "$($incident.Title)"
-        if ($label.Length -gt 46) { $label = $label.Substring(0, 44) + '..' }
-
-        $role = 'Unassessed'
-        $source = ''
-        if ($incident.ParentIncidentId) { $role = 'Symptom'; $source = "$($incident.ParentIncidentId)" }
-        elseif ($incident.RootCause) { $role = 'ROOT CAUSE' }
-        elseif ("$($incident.Assessment)" -like 'Reviewed, unrelated*') { $role = 'Unrelated'; $source = $hub; $loose++ }
-        elseif ("$($incident.Assessment)" -like 'Standalone*') { $role = 'Standalone'; $source = $hub; $loose++ }
-        else { $source = $hub; $loose++ }
-
-        $rows.Add([ordered]@{
-                Id       = $id
-                Label    = $label
-                Role     = $role
-                Severity = "$($incident.Severity)"
-                Events   = [int]$incident.EventCount
-                Symptoms = [int]$incident.SymptomCount
-                SourceId = $source
-                TargetId = $id
-            })
+        if ($placed["$($incident.RowKey)"]) { continue }
+        $order.Add(@{ Incident = $incident; Cause = $null; Rank = 2 })
     }
 
-    if ($loose) {
-        $rows.Add([ordered]@{
-                Id       = $hub
-                Label    = 'Reviewed, not connected'
-                Role     = "$loose incident$(if ($loose -ne 1) { 's' })"
-                Severity = 'normal'
-                Events   = 0
-                Symptoms = 0
-                SourceId = ''
-                TargetId = $hub
-            })
+    $group = 0
+    $lastCause = '~'
+    foreach ($entry in $order) {
+        $incident = $entry.Incident
+        $cause = $entry.Cause
+
+        if ($cause) {
+            $causeId = "$($cause.RowKey)"
+            $action = "$($cause.RecommendedAction)"
+            $cluster = "ROOT CAUSE  $($cause.RootCause)"
+            if ($action) { $cluster += "     DO NOW  $action" }
+        }
+        else {
+            $causeId = 'unrelated'
+            $cluster = 'REVIEWED, NOT CONNECTED  -  no mechanism links these to anything else'
+        }
+        if ($causeId -ne $lastCause) { $group++; $lastCause = $causeId }
+
+        $role = switch ($entry.Rank) {
+            0 { 'cause' }
+            1 { 'symptom of the above' }
+            default { if ($incident.RootCause) { 'standalone' } else { 'unrelated' } }
+        }
+
+        # The role rides in the incident's label rather than its own column: the
+        # grid repeats a column's value on every child row, and "symptom of the
+        # above" printed eleven times is exactly the noise this is meant to cut.
+        $label = switch ($entry.Rank) {
+            0 { "CAUSE  -  $($incident.Title)" }
+            1 { "symptom  -  $($incident.Title)" }
+            default { "$($incident.Title)" }
+        }
+
+        foreach ($symptom in (@($byIncident["$($incident.RowKey)"]) | Sort-Object { -[int]$_.Count })) {
+            $rows.Add([ordered]@{
+                    Cluster  = $cluster
+                    Incident = $label
+                    Role     = $role
+                    Severity = "$($incident.Severity)"
+                    Tool     = "$($symptom.Service)"
+                    Host     = "$(if ($symptom.Host) { $symptom.Host } else { $symptom.Service })"
+                    Symptom  = "$($symptom.Title)"
+                    Seen     = [int]$symptom.Count
+                    Order    = $group * 1000 + $entry.Rank
+                })
+        }
     }
 
     if ($rows.Count -eq 0) {
         $rows.Add([ordered]@{
-                Id = 'quiet'; Label = 'All systems normal'; Role = 'nothing open'
-                Severity = 'normal'; Events = 0; Symptoms = 0; SourceId = ''; TargetId = 'quiet'
+                Cluster = 'ALL SYSTEMS NORMAL'; Incident = 'Nothing open'; Role = ''
+                Severity = 'normal'; Tool = ''; Host = ''; Symptom = "Nothing in the last $hours hour(s)"
+                Seen = 0; Order = 0
             })
     }
     Write-Json $rows

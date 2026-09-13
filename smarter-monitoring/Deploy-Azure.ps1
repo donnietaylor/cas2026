@@ -163,14 +163,17 @@ $response = Invoke-AzRestMethod -Method PUT -Payload $body `
 if ($response.StatusCode -ge 400) { throw "Model deployment failed: $($response.Content)" }
 
 # --- Pipeline: storage + tables ---------------------------------------------
-Step "Storage $($names.Storage) + Events/Incidents tables"
+Step "Storage $($names.Storage) + RawEvents/Events/Incidents tables"
 $st = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $names.Storage -ErrorAction SilentlyContinue
 if (-not $st) {
     $st = New-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $names.Storage -Location $Location `
         -SkuName Standard_LRS -Kind StorageV2 -MinimumTlsVersion TLS1_2 -AllowBlobPublicAccess $false
 }
-# The correlation memory: Events (every failure kept) and Incidents (the groups).
-foreach ($table in 'Events', 'Incidents') {
+# The correlation memory, in the order the pipeline narrows it down:
+#   RawEvents  every failure exactly as it arrived, nothing merged
+#   Events     one row per distinct symptom, with a count
+#   Incidents  one row per group of symptoms
+foreach ($table in 'RawEvents', 'Events', 'Incidents') {
     if (-not (Get-AzStorageTable -Name $table -Context $st.Context -ErrorAction SilentlyContinue)) {
         $null = New-AzStorageTable -Name $table -Context $st.Context
     }

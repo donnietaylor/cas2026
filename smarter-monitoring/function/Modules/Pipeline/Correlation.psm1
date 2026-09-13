@@ -351,6 +351,41 @@ function New-Incident {
     }
 }
 
+function Write-RawEvent {
+    <#
+    .SYNOPSIS
+        Keep the event exactly as it arrived, before anything is merged away.
+
+        The rest of this module exists to make 168 events into 13 incidents. That
+        is the right thing to do and it destroys the evidence of how bad the raw
+        stream was, which is the thing worth showing someone first. So the stream
+        is kept too, unaggregated, in its own table.
+
+        Partitioned by minute so a "last N minutes" read touches a handful of
+        partitions. Row keys count DOWN from max ticks, so a plain listing comes
+        back newest first without sorting anything.
+    #>
+    param([Parameter(Mandatory)]$Event, [Parameter(Mandatory)][datetime]$Now)
+
+    $message = "$($Event.Message)"
+    if ($message.Length -gt 500) { $message = $message.Substring(0, 500) }
+
+    $descending = [DateTime]::MaxValue.Ticks - $Now.Ticks
+
+    $null = Invoke-Table -Method Post -Path 'RawEvents' -Body @{
+        PartitionKey = $Now.ToString('yyyyMMddHHmm')
+        RowKey       = "$($descending.ToString('D19'))-$([guid]::NewGuid().ToString('N').Substring(0, 6))"
+        Time         = $Now.ToString('o')
+        Source       = "$($Event.Source)"
+        Kind         = "$($Event.Kind)"
+        Severity     = "$($Event.Severity)"
+        Tool         = "$(if ($Event.Service) { $Event.Service } else { $Event.Source })"
+        Host         = "$($Event.Host)"
+        Title        = "$($Event.Title)"
+        Message      = $message
+    }
+}
+
 function Add-EventToIncident {
     <#
     .SYNOPSIS
@@ -426,6 +461,6 @@ function Add-EventToIncident {
     }
 }
 
-Export-ModuleMember -Function Add-EventToIncident, Get-Fingerprint, Get-EventKey, Get-PrimaryKey,
+Export-ModuleMember -Function Add-EventToIncident, Write-RawEvent, Get-Fingerprint, Get-EventKey, Get-PrimaryKey,
 Get-IncidentId, Get-OpenIncident, Get-TableRow, Get-HttpStatus, Invoke-Table, Get-ResourceToken,
 ConvertTo-TableLiteral, ConvertTo-Utc

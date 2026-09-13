@@ -29,6 +29,12 @@ foreach ($message in @($eventHubMessages)) {
         if ($pipelineEvent.Success) { $dropped++; continue }
         $kept++
 
+        # The unaggregated stream, for the "here is what actually arrived"
+        # screen. Wrapped separately: losing the archive must never cost us the
+        # correlation, which is the part that matters.
+        try { Write-RawEvent -Event $pipelineEvent -Now ([DateTime]::UtcNow) }
+        catch { Write-Warning "Raw archive write failed: $($_.Exception.Message)" }
+
         try {
             $result = Add-EventToIncident -Event $pipelineEvent -WindowMinutes $windowMinutes
             $outcomes[$result.Outcome] = ($outcomes[$result.Outcome] ?? 0) + 1

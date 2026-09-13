@@ -231,6 +231,7 @@ $token = "SharedAccessSignature sr=$resource&sig=$([uri]::EscapeDataString($sign
 
 $uri = "https://$namespace/$hub/messages?api-version=2014-01"
 $severityColor = @{ critical = 'Red'; error = 'Magenta'; warning = 'Yellow'; info = 'Gray' }
+$script:Failed = 0
 
 function Send-One {
     param([string]$ToolName, [string]$HostName, [string]$Level, [string]$Text, [string]$Detail)
@@ -248,15 +249,37 @@ function Send-One {
     # about sql-prod-03 lands on the same partition and is processed in order by
     # one worker. Without this, events round-robin and two invocations correlate
     # the same host at the same instant. Partition by the thing you correlate on.
-    Invoke-RestMethod -Method Post -Uri $uri -ContentType 'application/json' `
-        -Headers @{
+    $params = @{
+        Method      = 'Post'
+        Uri         = $uri
+        ContentType = 'application/json'
+        Headers     = @{
             Authorization    = $token
             BrokerProperties = (@{ PartitionKey = $HostName } | ConvertTo-Json -Compress)
-        } `
-        -Body ($payload | ConvertTo-Json -Compress) | Out-Null
+        }
+        Body        = ($payload | ConvertTo-Json -Compress)
+        # Ten seconds, not the ~21 that Windows spends on a dead TCP connect.
+        # A stalled send should fail fast enough to retry inside the demo's pacing.
+        TimeoutSec  = 10
+    }
 
-    Write-Host ('  {0,-14} {1,-13} {2,-9} {3}' -f $ToolName, $HostName, $Level, $Text) `
-        -ForegroundColor ($severityColor[$Level] ?? 'Gray')
+    # Three tries. One flaky connection must not end the outage halfway through
+    # the story - the room does not care that it was the network's fault.
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            Invoke-RestMethod @params | Out-Null
+            Write-Host ('  {0,-14} {1,-13} {2,-9} {3}' -f $ToolName, $HostName, $Level, $Text) `
+                -ForegroundColor ($severityColor[$Level] ?? 'Gray')
+            return $true
+        }
+        catch {
+            if ($attempt -lt 3) { Start-Sleep -Milliseconds (400 * $attempt); continue }
+            Write-Host ('  {0,-14} {1,-13} {2,-9} {3}' -f $ToolName, $HostName, 'SEND FAILED', $Text) `
+                -ForegroundColor DarkGray
+            Write-Host ("      $($_.Exception.Message)") -ForegroundColor DarkGray
+            return $false
+        }
+    }
 }
 
 function Send-Signal {
@@ -270,7 +293,8 @@ function Send-Signal {
             $text = $Entry.Title -f $value
             if ($Entry.Message -match '\{0\}') { $detail = $Entry.Message -f $value }
         }
-        Send-One -ToolName $Entry.Tool -HostName $Entry.Computer -Level $Entry.Severity -Text $text -Detail $detail
+        if (-not (Send-One -ToolName $Entry.Tool -HostName $Entry.Computer -Level $Entry.Severity `
+                    -Text $text -Detail $detail)) { $script:Failed++ }
         Start-Sleep -Milliseconds 120
     }
 }
@@ -284,7 +308,7 @@ if ($PSCmdlet.ParameterSetName -eq 'One') {
 }
 
 if ($PSCmdlet.ParameterSetName -eq 'Manual') {
-    Send-One -ToolName $Tool -HostName $Computer -Level $Severity -Text $Title -Detail $Message
+    $null = Send-One -ToolName $Tool -HostName $Computer -Level $Severity -Text $Title -Detail $Message
     return
 }
 
@@ -306,7 +330,11 @@ $sw.Stop()
 
 Write-Host ''
 Write-Host ('{0} events from {1} tools across {2} hosts in {3:n0}s.' -f `
-        $total,
+    ($total - $script:Failed),
     ($selected.Tool | Select-Object -Unique).Count,
     ($selected.Computer | Select-Object -Unique).Count,
     $sw.Elapsed.TotalSeconds) -ForegroundColor Green
+if ($script:Failed) {
+    Write-Host ("$($script:Failed) of $total could not be sent. Correlation still works - " +
+        'the counts on the dashboard are just lower.') -ForegroundColor Yellow
+}

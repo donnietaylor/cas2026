@@ -1,4 +1,4 @@
-"""
+r"""
 Store API - the demo app for Smarter Monitoring.
 
 /checkout calls /payments over HTTP. Hit /break and /payments starts failing;
@@ -10,6 +10,10 @@ sharing one trace ID per checkout.
     .\.venv\Scripts\Activate.ps1
     pip install -r requirements.txt
     python store_api.py
+
+If this folder ever gets moved or renamed, delete .venv and make it again: a
+venv records its own absolute path when it is created, and a moved one fails
+with ModuleNotFoundError on the first import.
 
 Then, from another terminal:
     ../Break-Everything.ps1          # breaks it and fires the whole outage

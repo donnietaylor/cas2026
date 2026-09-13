@@ -131,7 +131,11 @@ if (-not $NoEvents) {
     Write-Host ''
     Write-Host 'Third-party monitoring tools reporting' -ForegroundColor Yellow
     Write-Host $rule -ForegroundColor DarkGray
-    & (Join-Path $PSScriptRoot 'Send-Event.ps1') -Story -Fast:$Fast
+    # Send-Event retries its own sends and reports what it could not deliver.
+    # This catch is for everything else - if the signals fail entirely, the app
+    # is still broken and the rest of the run is still worth finishing.
+    try { & (Join-Path $PSScriptRoot 'Send-Event.ps1') -Story -Fast:$Fast }
+    catch { Write-Host "  Could not send the third-party signals: $($_.Exception.Message)" -ForegroundColor Yellow }
 }
 
 if ($appUp) {
