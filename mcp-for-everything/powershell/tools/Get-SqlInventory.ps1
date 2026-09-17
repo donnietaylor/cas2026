@@ -2,17 +2,20 @@
 
 <#
 .SYNOPSIS
-    Queries the product inventory in Azure SQL. Demonstrates the single most
-    common real-world ask: "let the assistant read our database" - done
-    without ever letting it write SQL.
+    Queries product inventory in the ERP's SQL Server database. Answers stock
+    questions without letting the model write SQL.
 
 .DESCRIPTION
-    Note what is NOT happening here: the model does not send us a query. It
-    sends us parameters. We own the SQL, we parameterise it, and the database
-    connection uses a read-only login.
+    The database is older than the ERP vendor's current sales team. It has an
+    ODBC driver, a SQL login, and no API. That is enough.
 
-    The moment you expose a run_sql(query) tool, your security model is
-    "whatever the model felt like typing." Expose questions, not a query engine.
+    What is not happening here: the model does not send a query. It sends
+    parameters. The SQL is in this file, it is parameterised, and the login it
+    uses is read-only. A run_sql(query) tool would make the security model
+    "whatever the model typed". Expose questions, not a query engine.
+
+    SQL_CONNECTION_STRING points at whatever SQL Server you have - on-prem,
+    a VM, or Azure SQL. With CAS_DEMO_MODE=true it returns canned data instead.
 
 .PARAMETER Category
     Product category to filter on.

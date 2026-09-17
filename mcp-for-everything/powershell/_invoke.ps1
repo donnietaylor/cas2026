@@ -23,7 +23,9 @@
     Advisory only; the host enforces the real timeout by killing the process.
 
 .EXAMPLE
-    '{"Category":"Widgets"}' | ./_invoke.ps1 -ToolPath ./tools/Get-Inventory.ps1
+    # From a PowerShell prompt use ..\Invoke-Tool.ps1, which pipes over real stdin.
+    # Piping a string into this script directly does not feed Console.In.
+    ..\Invoke-Tool.ps1 Get-SqlInventory @{ Category = 'Widgets' }
 #>
 [CmdletBinding()]
 param(

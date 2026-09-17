@@ -1,0 +1,35 @@
+#requires -Version 7.0
+
+<#
+.SYNOPSIS
+    Lists interactive logon sessions on a machine by parsing quser.exe output.
+
+.PARAMETER State
+    Only return sessions in this state.
+#>
+[CmdletBinding()]
+param(
+    [ValidateSet('Active', 'Disc', 'All')]
+    [string]$State = 'All'
+)
+
+# quser prints a header row, then one row per session. The current session is
+# prefixed with '>'. Disconnected sessions have no SESSIONNAME column at all,
+# which is why this is a regex and not a split on whitespace.
+$pattern = '^\s*>?(?<User>\S+)\s+(?:(?<Session>\S+)\s+)?(?<Id>\d+)\s+(?<State>Active|Disc)\s+(?<Idle>\S+)\s+(?<LogonTime>.+?)\s*$'
+
+quser.exe 2>$null |
+    Select-Object -Skip 1 |
+    ForEach-Object {
+        if ($_ -match $pattern) {
+            [PSCustomObject]@{
+                UserName    = $Matches.User
+                SessionName = $Matches.Session
+                Id          = [int]$Matches.Id
+                State       = $Matches.State
+                IdleTime    = $Matches.Idle
+                LogonTime   = $Matches.LogonTime
+            }
+        }
+    } |
+    Where-Object { $State -eq 'All' -or $_.State -eq $State }

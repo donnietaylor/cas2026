@@ -11,13 +11,13 @@ model shows up where judgment is genuinely required, and nowhere else.
 
 ## Session 1 — MCP for Everything: Turning Any Data Source into an AI-Ready Tool
 
-A Python MCP host that is one 145-line file you never touch again, with every
-actual tool written in **PowerShell 7**. Drop a `.ps1` in a folder and it becomes an
-AI-callable tool — schema, validation, and read-only/destructive classification all
-derived from the `param()` block you already know how to write.
+Most of what runs a business has no API. A small Python MCP host plus one
+**PowerShell 7** script per data source, with schema, validation and
+read-only/destructive classification derived from the `param()` block.
 
-Sources demoed: Azure Resource Graph, Azure SQL, Entra ID, CIM/WMI, a fixed-width
-mainframe extract, and a folder full of support tickets.
+Sources demoed: SQL Server, CIM/WMI, the registry, `netstat` and `quser` output, a
+fixed-width mainframe extract, and a folder of support tickets. One tool is written
+live.
 
 **[→ Session materials](./mcp-for-everything/)** · **[→ Run of show](./mcp-for-everything/demos/00-run-of-show.md)**
 
@@ -42,8 +42,8 @@ happens before any model is involved.
 cas2026/
 ├── mcp-for-everything/
 │   ├── host/              Python MCP host (FastAPI + uvicorn)
-│   ├── powershell/        Get-ToolManifest.ps1, _invoke.ps1, tools/*.ps1
-│   ├── clients/           Non-editor MCP client for demo 6
+│   ├── powershell/        Get-ToolManifest.ps1, _invoke.ps1, tools/*.ps1, extras/
+│   ├── clients/           Plain-Python MCP client (optional)
 │   ├── data/              Sample sources + canned fallbacks
 │   ├── demos/             Run of show
 │   ├── docs/              Setup, security
@@ -63,7 +63,7 @@ Both sessions run offline, which is also how you rehearse on a plane and how you
 survive dead conference wifi.
 
 ```powershell
-# Session 1 - Azure/SQL/Entra tools return canned data, everything else is real
+# Session 1 - the SQL tool returns canned data, everything else is real
 $env:CAS_DEMO_MODE = 'true'
 cd mcp-for-everything; .\Start-Demo.ps1
 

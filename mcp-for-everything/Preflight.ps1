@@ -14,6 +14,7 @@ function Add-Check {
 }
 
 Add-Check 'PowerShell 7+' ($PSVersionTable.PSVersion.Major -ge 7) $PSVersionTable.PSVersion.ToString()
+Add-Check 'Running on Windows' $IsWindows 'CIM, registry, netstat and quser demos need it'
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 Add-Check 'Python present' ([bool]$python) $(if ($python) { (python --version 2>&1) } else { 'not found' })
@@ -26,6 +27,7 @@ try {
     $manifest = $manifestRaw | ConvertFrom-Json
     Add-Check 'Tool manifest generates' $true "$($manifest.tools.Count) tools"
     Add-Check 'No manifest problems' ($manifest.problems.Count -eq 0) ($manifest.problems.file -join ', ')
+    Add-Check 'Live-add tool not already present' (-not ($manifest.tools.name -contains 'Get-LoggedOnUser')) 'delete tools/Get-LoggedOnUser.ps1 from the last rehearsal'
 }
 catch {
     Add-Check 'Tool manifest generates' $false "$manifestRaw"
@@ -34,13 +36,18 @@ catch {
 $portFree = -not (Test-NetConnection -ComputerName localhost -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue)
 Add-Check "Port $Port available" $portFree $(if ($portFree) { 'free' } else { 'IN USE - kill the old host' })
 
-Add-Check 'Azure connected' ([bool](Get-AzContext -ErrorAction SilentlyContinue)) `
-    ((Get-AzContext -ErrorAction SilentlyContinue).Account.Id ?? 'run Connect-AzAccount')
-
-Add-Check 'Graph connected' ([bool](Get-MgContext -ErrorAction SilentlyContinue)) `
-    ((Get-MgContext -ErrorAction SilentlyContinue).Account ?? 'run Connect-MgGraph')
+$sqlOk = $false
+if ($env:SQL_CONNECTION_STRING) {
+    try {
+        Import-Module SqlServer -ErrorAction Stop
+        $null = Invoke-Sqlcmd -ConnectionString $env:SQL_CONNECTION_STRING -Query 'SELECT 1' -ErrorAction Stop -QueryTimeout 5
+        $sqlOk = $true
+    } catch { }
+}
+Add-Check 'SQL reachable' $sqlOk $(if ($sqlOk) { 'ok' } elseif ($env:SQL_CONNECTION_STRING) { 'connection failed - demo mode will cover it' } else { 'SQL_CONNECTION_STRING not set - demo mode will cover it' })
 
 Add-Check 'Demo mode OFF' ($env:CAS_DEMO_MODE -ne 'true') ($env:CAS_DEMO_MODE ?? 'unset')
+Add-Check 'Audit log empty' (-not (Test-Path (Join-Path $PSScriptRoot 'logs' 'audit.jsonl'))) 'Remove-Item logs/audit.jsonl'
 
 $results | Format-Table | Out-String -Width 120 | Write-Host
 
@@ -49,4 +56,4 @@ if ($failed) {
     Write-Host "$($failed.Count) check(s) failed." -ForegroundColor Red
     exit 1
 }
-Write-Host 'All checks passed. Go get a coffee.' -ForegroundColor Green
+Write-Host 'All checks passed.' -ForegroundColor Green

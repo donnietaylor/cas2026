@@ -1,13 +1,12 @@
 # MCP for Everything: Turning Any Data Source into an AI-Ready Tool
 
-> You already know how to get the data. MCP is just a contract — and PowerShell can
-> sit on the other side of it.
+Most of what runs a business has no API and is not getting one: nightly file drops,
+a SQL Server with an ODBC driver, WMI and the registry, executables that print text.
+MCP is the adapter. This repo is one small Python host and a folder of PowerShell 7
+scripts, one per data source. Drop a `.ps1` in `powershell/tools/` and it is an
+AI-callable tool: no SDK, no schema written by hand, no restart.
 
-A Python MCP host you write once and never touch again, with every tool written as an
-ordinary PowerShell 7 script. Drop a `.ps1` in `powershell/tools/` and it becomes an
-AI-callable tool. No SDK, no schema by hand, no restart.
-
-**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Security notes](./docs/security.md)** · **[→ Slides](./slides/session1-mcp-for-everything.pptx)**
+**[→ Run of show](./demos/00-run-of-show.md)** · **[→ Setup](./docs/setup.md) · [→ Security notes](./docs/security.md)** · **[→ Slides](./slides/session1-mcp-for-everything.pptx)**
 
 ## How it works
 
@@ -49,8 +48,25 @@ cd ..
 Point VS Code at it with the included `.vscode/mcp.json`, open Copilot Chat in
 **Agent** mode, and ask it something.
 
-No Azure? `.\Start-Demo.ps1 -DemoMode` returns canned data for the cloud-backed tools.
-Everything else — legacy files, tickets, CIM — was always local.
+No SQL Server handy? `.\Start-Demo.ps1 -DemoMode` returns canned inventory data.
+Everything else — files, tickets, CIM, registry, netstat — is local.
+
+## Tools in the session
+
+| Tool | Source | Demo |
+|---|---|---|
+| `Get-Greeting` | nothing; the hello-world | 1 |
+| `Get-SqlInventory` | SQL Server, parameterised query, read-only login | 2 |
+| `Get-ServiceHealth` | CIM (`Win32_Service`) + System event log | 3 |
+| `Get-InstalledSoftware` | registry Uninstall keys | 3 |
+| `Get-ListeningPort` | `netstat.exe -ano`, parsed with a regex | 4 |
+| `Read-LegacyReport` | fixed-width nightly extract on a file share | 5 |
+| `Search-SupportTicket` | folder of markdown and .txt | 5, 7 |
+| `Get-LoggedOnUser` | `quser.exe` — **typed live**; finished copy in `fallback/` | 6 |
+| `Restart-DemoService` | hidden by default; the allowlist demo | 7 |
+
+`powershell/extras/` has Azure Resource Graph and Entra tools that work but are not in
+the session.
 
 ## Writing a tool
 
@@ -92,10 +108,12 @@ Save it in `powershell/tools/`. It's live.
 
 | Path | What |
 |---|---|
+| `Invoke-Tool.ps1` | Run one tool the way the host does, no AI involved |
 | `host/app.py` | **The entire Python host.** MCP endpoint, pwsh bridge, allowlist, audit |
 | `powershell/Get-ToolManifest.ps1` | param blocks → JSON Schema |
 | `powershell/_invoke.ps1` | stdin JSON → splat → JSON envelope |
 | `powershell/tools/*.ps1` | The actual tools |
+| `powershell/extras/` | Azure/Entra tools, not in the session |
 | `data/` | Sample sources and offline fallbacks |
 | `fallback/` | Paste-ready scripts for when live typing goes sideways |
 | `slides/build-session1.js` | Regenerates the deck (`node build-session1.js`) |
