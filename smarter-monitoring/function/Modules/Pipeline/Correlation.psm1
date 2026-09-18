@@ -1,17 +1,16 @@
 <#
     Correlation: turn a stream of failure events into a handful of incidents.
 
-    Two Azure Storage tables, reached over REST with the Function's managed
-    identity (no keys, no SDK):
+    Two questions, asked of every event, and the writes that record the
+    answers. Table access lives in Plumbing.psm1.
 
-      Events     one row per *symptom*, not per raw event.
-                 PartitionKey = incident id, RowKey = fingerprint, Count = how
-                 many times it has happened. 300 identical checkout failures are
-                 one row with Count 300.
+      Is this the same symptom?    Get-Fingerprint  -> the Events row key
+      Is this the same incident?   Get-PrimaryKey   -> the Events partition,
+                                   Get-IncidentId      and the Incidents row
 
-      Incidents  one row per group. PartitionKey 'incident', RowKey = incident id.
-                 Holds the keys it owns, first/last seen, totals, and later the
-                 AI pass's root cause.
+    Both are answered from facts the event carries. No model is involved; the
+    third question - is this the same PROBLEM as that other incident - needs
+    one, and lives in Ai.psm1.
 
     IDENTITY IS DERIVED, NOT INVENTED
 
@@ -33,129 +32,16 @@
       2. otherwise                                                  -> new symptom
     and the incident is created, or revived if it has gone quiet longer than the
     window.
+
+    THE INCIDENT ROW STORES NO TOTALS
+
+    No event count, no symptom count, no severity, no headline. Those are all
+    computed from the symptom rows whenever something asks (Measure-Incident,
+    in Plumbing.psm1). The only counter anywhere is Count on a symptom row, and
+    it is the one write that has to be conditional.
 #>
 
-$script:Tokens = @{}
-$script:SeverityRank = @{ critical = 4; error = 3; warning = 2; info = 1 }
-
-function Get-ResourceToken {
-    <#
-    .SYNOPSIS
-        A bearer token for one Azure resource, cached until it is nearly stale.
-    #>
-    param([Parameter(Mandatory)][string]$Resource)
-
-    $cached = $script:Tokens[$Resource]
-    if ($cached -and (Get-Date) -lt $cached.Expires) { return $cached.Token }
-
-    $token =
-    if ($env:IDENTITY_ENDPOINT -and $env:IDENTITY_HEADER) {
-        # Managed identity, in Azure.
-        $uri = "$($env:IDENTITY_ENDPOINT)?resource=$([uri]::EscapeDataString($Resource))&api-version=2019-08-01"
-        (Invoke-RestMethod -Uri $uri -Headers @{ 'X-IDENTITY-HEADER' = $env:IDENTITY_HEADER } -TimeoutSec 20).access_token
-    }
-    else {
-        # Local: whatever Connect-AzAccount has. Az.Accounts 5+ returns a SecureString.
-        $raw = (Get-AzAccessToken -ResourceUrl $Resource).Token
-        if ($raw -is [securestring]) { ConvertFrom-SecureString $raw -AsPlainText } else { $raw }
-    }
-
-    $script:Tokens[$Resource] = @{ Token = $token; Expires = (Get-Date).AddMinutes(30) }
-    return $token
-}
-
-function Get-StorageToken { Get-ResourceToken -Resource 'https://storage.azure.com/' }
-
-function Invoke-Table {
-    <#
-    .SYNOPSIS
-        One call against the Table service. $Path is everything after the
-        endpoint, e.g. "Incidents()?`$filter=..." or "Events(PartitionKey='a',RowKey='b')".
-
-    .PARAMETER IfMatch
-        ETag for a conditional Merge. '*' overwrites blindly; a real ETag makes the
-        write fail with 412 if someone else got there first, which is how the
-        counters survive two workers updating one incident at the same time.
-    #>
-    param(
-        [Parameter(Mandatory)][ValidateSet('Get', 'Post', 'Merge', 'Delete')][string]$Method,
-        [Parameter(Mandatory)][string]$Path,
-        [hashtable]$Body,
-        [string]$IfMatch = '*'
-    )
-
-    $endpoint = $env:TABLE_ENDPOINT
-    if (-not $endpoint) { throw 'TABLE_ENDPOINT is not set.' }
-
-    $headers = @{
-        Authorization  = "Bearer $(Get-StorageToken)"
-        'x-ms-version' = '2021-04-10'
-        'x-ms-date'    = [DateTime]::UtcNow.ToString('R')
-        # minimalmetadata, not nometadata: it costs a few bytes and returns
-        # odata.etag, which the conditional merges below need.
-        Accept         = 'application/json;odata=minimalmetadata'
-    }
-    if ($Method -in 'Merge', 'Delete') { $headers['If-Match'] = $IfMatch }
-    if ($Method -eq 'Post') { $headers['Prefer'] = 'return-no-content' }
-
-    $params = @{
-        Uri         = "$($endpoint.TrimEnd('/'))/$Path"
-        Method      = $Method
-        Headers     = $headers
-        TimeoutSec  = 20
-        ContentType = 'application/json'
-    }
-    if ($Body) { $params.Body = ($Body | ConvertTo-Json -Depth 10 -Compress) }
-
-    Invoke-RestMethod @params
-}
-
-function Get-HttpStatus {
-    # The status code off a terminating Invoke-RestMethod error, or 0.
-    param($ErrorRecord)
-    $response = $ErrorRecord.Exception.Response
-    if ($response -and $response.StatusCode) { return [int]$response.StatusCode }
-    return 0
-}
-
-function ConvertTo-Utc {
-    <#
-    .SYNOPSIS
-        A timestamp off a table row, as a comparable UTC DateTime.
-
-        Necessary because Invoke-RestMethod runs the response through
-        ConvertFrom-Json, which silently turns an ISO-8601 string into a
-        [datetime]. So a column we wrote as a string comes back as a date, and
-        "$($row.LastSeen)" renders it in the worker's locale - "09/12/2026
-        20:24:29" - which compares against an ISO cutoff as less than everything.
-        Every incident then looks stale, gets revived, and its symptom inserts
-        collide. Compare dates as dates.
-    #>
-    param($Value)
-    if ($Value -is [datetime]) { return $Value.ToUniversalTime() }
-    if (-not "$Value") { return [datetime]::MinValue }
-    return [datetime]::Parse("$Value", [cultureinfo]::InvariantCulture,
-        [Globalization.DateTimeStyles]::AdjustToUniversal -bor [Globalization.DateTimeStyles]::AssumeUniversal)
-}
-
-function ConvertTo-TableLiteral {
-    # Single quotes are escaped by doubling them in OData filters.
-    param([string]$Value)
-    return ($Value -replace "'", "''")
-}
-
-function Get-TableRow {
-    # A point read that returns $null instead of throwing when the row isn't there.
-    param([Parameter(Mandatory)][string]$Table, [Parameter(Mandatory)][string]$Partition,
-        [Parameter(Mandatory)][string]$Row)
-    try {
-        return Invoke-Table -Method Get -Path "$Table(PartitionKey='$(ConvertTo-TableLiteral $Partition)',RowKey='$(ConvertTo-TableLiteral $Row)')"
-    }
-    catch {
-        if ((Get-HttpStatus $_) -eq 404) { return $null }
-        throw
-    }
-}
+Import-Module (Join-Path $PSScriptRoot 'Plumbing.psm1')
 
 function Get-Fingerprint {
     <#
@@ -182,7 +68,7 @@ function Get-EventKey {
     <#
     .SYNOPSIS
         Every key an event can be correlated on. These are facts, not guesses -
-        which is why this layer needs no model.
+        which is why no model is needed to answer the first two questions.
     #>
     param([Parameter(Mandatory)]$Event)
 
@@ -225,72 +111,6 @@ function Get-IncidentId {
     return 'inc-' + [Convert]::ToHexString($hash).Substring(0, 12).ToLowerInvariant()
 }
 
-function Get-OpenIncident {
-    param([Parameter(Mandatory)][string]$Since)
-    $filter = [uri]::EscapeDataString("Status eq 'open' and LastSeen ge '$(ConvertTo-TableLiteral $Since)'")
-    return @((Invoke-Table -Method Get -Path "Incidents()?`$filter=$filter").value)
-}
-
-function Update-Incident {
-    <#
-    .SYNOPSIS
-        Roll an event into its incident: bump the totals, widen the keys, keep the
-        worst severity and its headline, and mark it touched so the AI pass knows
-        to look at it.
-
-        Conditional on the row's ETag and retried, because two workers can be
-        adding to the same incident at the same instant and a blind merge would
-        silently lose one of the counts.
-    #>
-    param(
-        [Parameter(Mandatory)][string]$IncidentId,
-        [Parameter(Mandatory)]$Event,
-        [Parameter(Mandatory)][string]$Now,
-        [switch]$NewSymptom
-    )
-
-    $path = "Incidents(PartitionKey='incident',RowKey='$(ConvertTo-TableLiteral $IncidentId)')"
-
-    for ($attempt = 1; $attempt -le 6; $attempt++) {
-        $incident = Invoke-Table -Method Get -Path $path
-        $etag = $incident.'odata.etag'
-
-        $keys = @($incident.CorrelationKeys -split ';' | Where-Object { $_ })
-        foreach ($key in Get-EventKey $Event) { if ($keys -notcontains $key) { $keys += $key } }
-
-        # The headline follows the worst thing in the incident, not the first
-        # thing. An incident that opens on "disk latency" and escalates to "pool
-        # exhausted" should not still be titled "disk latency" on the dashboard.
-        $severity = $incident.Severity
-        $title = $incident.Title
-        if (($script:SeverityRank[$Event.Severity] ?? 0) -gt ($script:SeverityRank[$severity] ?? 0)) {
-            $severity = $Event.Severity
-            $title = $Event.Title
-        }
-
-        $update = @{
-            LastSeen        = $Now
-            EventCount      = [int]$incident.EventCount + 1
-            SymptomCount    = [int]$incident.SymptomCount + $(if ($NewSymptom) { 1 } else { 0 })
-            Severity        = $severity
-            Title           = $title
-            CorrelationKeys = ($keys -join ';')
-            TouchedAt       = $Now
-        }
-
-        try {
-            $null = Invoke-Table -Method Merge -Path $path -Body $update -IfMatch $etag
-            return
-        }
-        catch {
-            # 412: someone else updated the row between our read and our write.
-            # Read it again and reapply - the other worker's count stays.
-            if ((Get-HttpStatus $_) -ne 412 -or $attempt -eq 6) { throw }
-            Start-Sleep -Milliseconds (40 * $attempt)
-        }
-    }
-}
-
 function New-Incident {
     <#
     .SYNOPSIS
@@ -304,9 +124,7 @@ function New-Incident {
         [Parameter(Mandatory)][datetime]$Cutoff
     )
 
-    $path = "Incidents(PartitionKey='incident',RowKey='$(ConvertTo-TableLiteral $IncidentId)')"
     $existing = Get-TableRow -Table 'Incidents' -Partition 'incident' -Row $IncidentId
-
     if ($existing -and (ConvertTo-Utc $existing.LastSeen) -ge $Cutoff -and "$($existing.Status)" -eq 'open') {
         return $null
     }
@@ -315,14 +133,10 @@ function New-Incident {
         PartitionKey      = 'incident'
         RowKey            = $IncidentId
         Status            = 'open'
-        Title             = $Event.Title
-        Severity          = $Event.Severity
         CorrelationKeys   = ((Get-EventKey $Event) -join ';')
         FirstSeen         = $Now
         LastSeen          = $Now
         TouchedAt         = $Now
-        EventCount        = 0
-        SymptomCount      = 0
         # A revived incident starts over: last week's root cause is not this
         # morning's, and leaving it there would be worse than saying nothing.
         AnalyzedAt        = ''
@@ -335,7 +149,8 @@ function New-Incident {
     }
 
     if ($existing) {
-        $null = Invoke-Table -Method Merge -Path $path -Body $row -IfMatch $existing.'odata.etag'
+        $path = "Incidents(PartitionKey='incident',RowKey='$(ConvertTo-TableLiteral $IncidentId)')"
+        $null = Invoke-Table -Method Merge -Path $path -Body $row
         return 'new-incident'
     }
 
@@ -400,22 +215,25 @@ function Add-EventToIncident {
     $nowUtc = [DateTime]::UtcNow
     $now = $nowUtc.ToString('o')
     $cutoffUtc = $nowUtc.AddMinutes(-$WindowMinutes)
-    $cutoff = $cutoffUtc.ToString('o')
 
     $incidentId = Get-IncidentId (Get-PrimaryKey $Event)
     $fingerprint = Get-Fingerprint $Event
 
     $outcome = New-Incident -IncidentId $incidentId -Event $Event -Now $now -Cutoff $cutoffUtc
 
-    # Known symptom of this incident, still inside the window? Count it.
+    $symptomPath = "Events(PartitionKey='$(ConvertTo-TableLiteral $incidentId)',RowKey='$fingerprint')"
     $symptom = Get-TableRow -Table 'Events' -Partition $incidentId -Row $fingerprint
+
     if (-not $outcome -and $symptom -and (ConvertTo-Utc $symptom.LastSeen) -ge $cutoffUtc) {
-        $path = "Events(PartitionKey='$(ConvertTo-TableLiteral $incidentId)',RowKey='$fingerprint')"
+        # Known symptom, still inside the window: count it. This is the one
+        # counter in the pipeline, so it is the one write that checks the ETag -
+        # two workers adding to the same row at the same instant would otherwise
+        # lose a count. 412 means someone else got there first: read, retry.
         $count = 0
         for ($attempt = 1; $attempt -le 6; $attempt++) {
             try {
                 $count = [int]$symptom.Count + 1
-                $null = Invoke-Table -Method Merge -Path $path -IfMatch $symptom.'odata.etag' `
+                $null = Invoke-Table -Method Merge -Path $symptomPath -IfMatch $symptom.'odata.etag' `
                     -Body @{ Count = $count; LastSeen = $now }
                 break
             }
@@ -425,42 +243,44 @@ function Add-EventToIncident {
                 $symptom = Get-TableRow -Table 'Events' -Partition $incidentId -Row $fingerprint
             }
         }
-        Update-Incident -IncidentId $incidentId -Event $Event -Now $now
-        return [PSCustomObject]@{
-            IncidentId = $incidentId; Fingerprint = $fingerprint
-            Outcome    = 'deduped'; Count = $count
+        $result = 'deduped'
+    }
+    else {
+        $message = "$($Event.Message)"
+        if ($message.Length -gt 2000) { $message = $message.Substring(0, 2000) }
+
+        $null = Invoke-Table -Method Post -Path 'Events' -Body @{
+            PartitionKey = $incidentId
+            RowKey       = $fingerprint
+            Source       = $Event.Source
+            Kind         = $Event.Kind
+            Severity     = $Event.Severity
+            Title        = $Event.Title
+            Message      = $message
+            Service      = $Event.Service
+            Host         = $Event.Host
+            ResourceId   = $Event.ResourceId
+            TraceId      = $Event.TraceId
+            SpanId       = $Event.SpanId
+            ParentSpanId = $Event.ParentSpanId
+            Count        = 1
+            FirstSeen    = $now
+            LastSeen     = $now
         }
+        $count = 1
+        $result = $outcome ?? 'new-symptom'
     }
 
-    $message = "$($Event.Message)"
-    if ($message.Length -gt 2000) { $message = $message.Substring(0, 2000) }
-
-    $null = Invoke-Table -Method Post -Path 'Events' -Body @{
-        PartitionKey = $incidentId
-        RowKey       = $fingerprint
-        Source       = $Event.Source
-        Kind         = $Event.Kind
-        Severity     = $Event.Severity
-        Title        = $Event.Title
-        Message      = $message
-        Service      = $Event.Service
-        Host         = $Event.Host
-        ResourceId   = $Event.ResourceId
-        TraceId      = $Event.TraceId
-        SpanId       = $Event.SpanId
-        ParentSpanId = $Event.ParentSpanId
-        Count        = 1
-        FirstSeen    = $now
-        LastSeen     = $now
-    }
-    Update-Incident -IncidentId $incidentId -Event $Event -Now $now -NewSymptom
+    # Touch the incident so the dashboard sees it move and the AI pass knows to
+    # look again. Nothing here is a counter, so this merge is unconditional.
+    $null = Invoke-Table -Method Merge -Body @{ LastSeen = $now; TouchedAt = $now } `
+        -Path "Incidents(PartitionKey='incident',RowKey='$(ConvertTo-TableLiteral $incidentId)')"
 
     return [PSCustomObject]@{
         IncidentId = $incidentId; Fingerprint = $fingerprint
-        Outcome    = ($outcome ?? 'new-symptom'); Count = 1
+        Outcome    = $result; Count = $count
     }
 }
 
 Export-ModuleMember -Function Add-EventToIncident, Write-RawEvent, Get-Fingerprint, Get-EventKey, Get-PrimaryKey,
-Get-IncidentId, Get-OpenIncident, Get-TableRow, Get-HttpStatus, Invoke-Table, Get-ResourceToken,
-ConvertTo-TableLiteral, ConvertTo-Utc
+Get-IncidentId, New-Incident

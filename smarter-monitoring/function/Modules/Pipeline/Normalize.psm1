@@ -1,5 +1,5 @@
 <#
-    Turns the three event shapes into one.
+    Normalize: turn the three event shapes into one.
 
         App Insights (diagnostic setting)  { "records": [ { "Type": "AppRequests", ... } ] }
         Azure Monitor alert                { "data": { "essentials": { ... } } }   common alert schema
@@ -8,8 +8,6 @@
     Every event comes out with the same fields. The correlation keys are TraceId
     and ParentSpanId (from OpenTelemetry, via App Insights), ResourceId and Host.
 #>
-
-$script:SeenShapes = @{}
 
 function Get-Field {
     # First non-empty value among a few candidate property names. Exports differ
@@ -191,37 +189,4 @@ function ConvertTo-PipelineEvent {
     }
 }
 
-function Write-RawLine {
-    param([string]$Key, $Sample)
-    $json = $Sample | ConvertTo-Json -Depth 10 -Compress
-    if ($json.Length -gt 4000) { $json = $json.Substring(0, 4000) + '...' }
-    Write-Host "RAW $Key $json"
-}
-
-function Write-RawSample {
-    <#
-    .SYNOPSIS
-        Logs one raw message per shape this worker sees, so the real field names
-        are visible in the logs. App Insights records are logged once per record
-        type (AppRequests, AppDependencies, AppExceptions), because each type
-        carries different fields.
-    #>
-    param($Payload)
-
-    $shape = Get-PayloadShape $Payload
-    if ($shape -eq 'appinsights') {
-        foreach ($record in @($Payload.records)) {
-            $key = "appinsights:$(Get-Field $record 'Type', 'category')"
-            if ($script:SeenShapes.ContainsKey($key)) { continue }
-            $script:SeenShapes[$key] = $true
-            Write-RawLine $key $record
-        }
-        return
-    }
-
-    if ($script:SeenShapes.ContainsKey($shape)) { return }
-    $script:SeenShapes[$shape] = $true
-    Write-RawLine $shape $Payload
-}
-
-Export-ModuleMember -Function ConvertTo-PipelineEvent, Write-RawSample
+Export-ModuleMember -Function ConvertTo-PipelineEvent

@@ -13,6 +13,8 @@
 //
 //  staging.pptx is gitignored - it is an output, and it is expected to churn.
 //
+//  SECTION 0b - which function runs when (three swim lanes) and the function
+//              catalogue grouped by the question each one answers. Two slides.
 //  SECTION 1 - code walkthrough. Six slides that give the room a view into the
 //              pipeline between demos. Every snippet is real code from this
 //              repo, trimmed to what fits on a projector. Line counts are
@@ -36,7 +38,7 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
 //
 {
     const s = d.slide(
-        'The architecture slide. Walk it left to right once, then point at the two things that are not obvious: the dashed loop is the AI pass reading and writing the same table the ingest path writes, and the three LAYER chips are the spine of the session. Roughly ninety seconds; do not narrate every box.'
+        'The architecture slide. Walk it left to right once, then point at the two things that are not obvious: the dashed loop is the AI pass reading and writing the same table the ingest path writes, and the three question chips - same symptom, same incident, same problem - are the spine of the session. Roughly ninety seconds; do not narrate every box.'
     );
     d.head(s, 'sources to dashboard', 'The whole event flow');
 
@@ -53,7 +55,7 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
     const srcs = [
         [C.BLU, 'OpenTelemetry', 'store-api on this laptop', 'via Application Insights'],
         [C.AMB, 'Azure Monitor', 'metric alert on failures', 'via an action group'],
-        [C.GRN, '12 monitoring tools', 'Send-Event.ps1', 'REST + SAS, key = host'],
+        [C.GRN, '12 monitoring tools', 'Send-Event.ps1', 'REST + SAS'],
     ];
     srcs.forEach((src, i) => {
         const y = ROW + 0.5 + i * 0.85;
@@ -76,7 +78,7 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
     s.addText('One hub.\nEverything.', {
         x: 3.55, y: mid - 0.72, w: 1.15, h: 0.6, isTextBox: true, margin: 0, lineSpacing: 20,
         fontFace: SANS, fontSize: 15, bold: true, color: C.TXT });
-    s.addText('monitoring-\nevents\n\n2 partitions\npartition key\n= host', {
+    s.addText('monitoring-\nevents', {
         x: 3.55, y: mid - 0.05, w: 1.15, h: 1.3, isTextBox: true, margin: 0, lineSpacing: 14,
         fontFace: MONO, fontSize: 9, color: C.MUT });
 
@@ -92,7 +94,7 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
         [C.BLU, 'Normalise', 'three shapes, one object'],
         [C.DIM, 'Drop successes', 'a success is not an event'],
         [C.GRN, 'Archive the raw event', 'nothing merged yet'],
-        [C.AMB, 'Correlate', 'fingerprint, then shared key'],
+        [C.AMB, 'Correlate', 'which incident, which symptom'],
     ];
     steps.forEach((st, i) => {
         const y = ROW + 0.46 + i * 0.56;
@@ -102,11 +104,11 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
         s.addText(st[2], { x: 5.72, y: y + 0.23, w: 2.5, h: 0.22, isTextBox: true, margin: 0,
             fontFace: SANS, fontSize: 10, color: C.MUT });
     });
-    d.chip(s, 5.72, ROW + 2.68, 0.72, 'layer 1', C.AMB);
-    d.chip(s, 6.52, ROW + 2.68, 0.72, 'layer 2', C.AMB);
-    s.addText('no model involved', {
-        x: 7.32, y: ROW + 2.68, w: 0.95, h: 0.22, isTextBox: true, margin: 0,
-        fontFace: SANS, fontSize: 9, color: C.DIM, italic: true });
+    d.chip(s, 5.35, ROW + 2.68, 1.20, 'same symptom?', C.AMB);
+    d.chip(s, 6.63, ROW + 2.68, 1.25, 'same incident?', C.AMB);
+    s.addText('no model', {
+        x: 7.92, y: ROW + 2.68, w: 0.45, h: 0.22, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 8.5, color: C.DIM, italic: true });
 
     d.arrow(s, 8.35, mid, 0.30, 'right');
 
@@ -175,9 +177,9 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
               'The verdict is written back onto the incident rows.', {
         x: 5.35, y: BOT + 0.74, w: 4.8, h: 0.44, isTextBox: true, margin: 0, lineSpacing: 14,
         fontFace: SANS, fontSize: 11, color: C.MUT });
-    d.chip(s, 5.35, BOT + 1.26, 0.72, 'layer 3', C.RED);
-    s.addText('the only stage that reads English', {
-        x: 6.15, y: BOT + 1.26, w: 3.2, h: 0.22, isTextBox: true, margin: 0,
+    d.chip(s, 5.35, BOT + 1.26, 1.20, 'same problem?', C.RED);
+    s.addText('the only question that needs English', {
+        x: 6.63, y: BOT + 1.26, w: 3.2, h: 0.22, isTextBox: true, margin: 0,
         fontFace: SANS, fontSize: 9, color: C.DIM, italic: true });
 
     // --- 7. how it authenticates --------------------------------------------
@@ -207,6 +209,211 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
 
     s.addText('179 events in. 13 incidents and 2 root causes out. About four seconds of model time.', {
         x: M, y: 6.78, w: CONTENT_W, h: 0.3, isTextBox: true, margin: 0, align: 'center',
+        fontFace: SANS, fontSize: 12, color: C.DIM, italic: true });
+}
+
+// #############################################################################
+// SECTION 0b - WHICH FUNCTION RUNS WHEN, AND WHICH QUESTION IT ANSWERS
+// #############################################################################
+//
+//  Two slides that answer the question the code does not answer on its own:
+//  the three questions in the story are not three passes in the code. Slide A
+//  is the execution order per trigger; slide B is the function catalogue
+//  grouped by role. Every name on both slides is a real function in the repo.
+//
+{
+    // ------------------------------------------------------------------ A ----
+    const s = d.slide(
+        'The execution slide. Three swim lanes, one per trigger. The top lane is the one to spend time on: point at the row inside Add-EventToIncident and say that the incident is decided before the symptom - question two before question one - because they are the two halves of one row address. The other two lanes are a sentence each.'
+    );
+    d.head(s, 'three triggers, one table', 'Which function runs when');
+
+    const LX = M + 0.18, LW = 1.85;          // lane label column
+    const X0 = M + 2.2, X1 = M + CONTENT_W;          // chain area
+    const CW = X1 - X0;
+
+    // A box in a chain: a mono name (or a sans phrase), a description, an
+    // optional question chip. Returns nothing; geometry is the caller's problem.
+    const box = (x, y, w, h, name, desc, o = {}) => {
+        s.addShape(d.pres.ShapeType.roundRect, {
+            x, y, w, h, rectRadius: 0.05, fill: { color: C.PANEL2 },
+            line: o.outline ? { color: o.outline, width: 1.25 } : undefined
+        });
+        const nameLines = (name.match(/\n/g) || []).length + 1;
+        const nh = o.sans ? 0.24 : (nameLines > 1 ? 0.34 : 0.22);
+        s.addText(name, {
+            x: x + 0.1, y: y + 0.07, w: w - 0.2, h: nh, isTextBox: true, margin: 0, lineSpacing: 12,
+            fontFace: o.sans ? SANS : MONO, fontSize: o.sans ? 10.5 : (w < 2 ? 8.5 : 9.5), bold: true,
+            color: o.nameColor || C.TXT });
+        s.addText(desc, {
+            x: x + 0.1, y: y + 0.09 + nh, w: w - 0.2, h: h - nh - 0.16 - (o.chip ? 0.24 : 0),
+            isTextBox: true, margin: 0, valign: 'top', lineSpacing: 11,
+            fontFace: SANS, fontSize: 8.5, color: C.MUT });
+        if (o.chip) d.chip(s, x + 0.1, y + h - 0.30, 1.25, o.chip[0], o.chip[1]);
+        if (o.dot) d.dot(s, x + w - 0.24, y + 0.1, o.dot, 0.12);
+    };
+
+    const chain = (y, h, items, gap) => {
+        const w = (CW - gap * (items.length - 1)) / items.length;
+        items.forEach((it, i) => {
+            const x = X0 + i * (w + gap);
+            box(x, y, w, h, it[0], it[1], it[2] || {});
+            if (i < items.length - 1) d.arrow(s, x + w + 0.03, y + h / 2, gap - 0.06, 'right');
+        });
+    };
+
+    const laneLabel = (y, eyebrow, title, when, mod, modY = 1.34) => {
+        s.addText(eyebrow, { x: LX, y: y + 0.14, w: LW, h: 0.22, isTextBox: true, margin: 0,
+            fontFace: SANS, fontSize: 9.5, bold: true, color: C.DIM, charSpacing: 1 });
+        s.addText(title, { x: LX, y: y + 0.38, w: LW, h: 0.46, isTextBox: true, margin: 0, lineSpacing: 14,
+            fontFace: SANS, fontSize: 12.5, bold: true, color: C.TXT });
+        s.addText(when, { x: LX, y: y + 0.86, w: LW, h: 0.4, isTextBox: true, margin: 0, lineSpacing: 12,
+            fontFace: SANS, fontSize: 9.5, color: C.MUT, italic: true });
+        s.addText(mod, { x: LX, y: y + modY, w: LW, h: 0.24, isTextBox: true, margin: 0, lineSpacing: 12,
+            fontFace: MONO, fontSize: 8.5, color: C.DIM });
+    };
+
+    // --- lane 1 : ingest ------------------------------------------------------
+    const L1 = 1.50, L1H = 2.40;
+    d.card(s, M, L1, CONTENT_W, L1H);
+    laneLabel(L1, 'INGESTEVENTS', 'Event Hubs trigger', 'runs per batch,\nevery step per event', 'Normalize.psm1\nCorrelation.psm1');
+
+    chain(L1 + 0.16, 0.66, [
+        ['ConvertTo-PipelineEvent', 'Three payload shapes become one event object. Successes are dropped here - a success is not an event.', { dot: C.BLU }],
+        ['Write-RawEvent', 'Archived exactly as it arrived, before anything is merged away. This is the RawEvents firehose.', { dot: C.GRN }],
+        ['Add-EventToIncident', 'The correlator. Everything on the row below happens inside this one call, in this order.', { dot: C.AMB, outline: C.AMB }],
+    ], 0.35);
+
+    s.addText('inside Add-EventToIncident, for each event, left to right', {
+        x: X0, y: L1 + 0.88, w: CW, h: 0.2, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 9, italic: true, color: C.AMB });
+
+    chain(L1 + 1.08, 1.18, [
+        ['Get-PrimaryKey\n→ Get-IncidentId', 'Which incident: host > resource > service > trace, then hashed.', { chip: ['same incident?', C.AMB] }],
+        ['Get-Fingerprint', 'Which symptom. Digits → N, then source | kind | title | resource | host, hashed.', { chip: ['same symptom?', C.AMB] }],
+        ['New-Incident', 'Create the incident row, or revive it if it went quiet longer than the window.'],
+        ['Events(id, fp)\nseen in the window?', 'Yes: Count + 1, outcome deduped. No: POST a new symptom row, outcome new-symptom.', { sans: true }],
+        ['Touch the incident', 'LastSeen and TouchedAt, unconditional. Nothing on the incident row is a counter, so nothing can race.', { sans: true }],
+    ], 0.22);
+
+    // --- lane 2 : analysis ----------------------------------------------------
+    const L2 = L1 + L1H + 0.18, L2H = 1.46;
+    d.card(s, M, L2, CONTENT_W, L2H);
+    laneLabel(L2, 'ANALYZETIMER  ·  ANALYZE', 'Every minute,\nor on demand', 'one call to\nInvoke-IncidentAnalysis', 'Ai.psm1', 1.22);
+
+    chain(L2 + 0.16, 1.14, [
+        ['Get-OpenIncident', 'Every open incident seen in the last 60 minutes.'],
+        ['Anything touched\nsince the last pass?', 'A meta row remembers LastRun. A quiet minute costs nothing. -Force skips the check for the demo.', { sans: true }],
+        ['Get-IncidentBrief', 'Top 6 symptoms per incident. Row keys and plumbing stripped - the model sees the outage, not the schema.'],
+        ['Invoke-OpenAI', 'One call. gpt-4.1-mini, temp 0, JSON out, parsed by ConvertFrom-ModelJson.', { chip: ['same problem?', C.RED] }],
+        ['Write-IncidentVerdict', 'Once per incident: cause, downstream, unrelated or forgotten. Clusters of one are demoted. Then LastRun moves.'],
+    ], 0.22);
+
+    // --- lane 3 : the endpoint ------------------------------------------------
+    const L3 = L2 + L2H + 0.18, L3H = 0.98;
+    d.card(s, M, L3, CONTENT_W, L3H);
+    s.addText('GETINCIDENTS', { x: LX, y: L3 + 0.14, w: LW, h: 0.22, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 9.5, bold: true, color: C.DIM, charSpacing: 1 });
+    s.addText('HTTP, when the\nworkbook refreshes', { x: LX, y: L3 + 0.38, w: LW, h: 0.46, isTextBox: true, margin: 0, lineSpacing: 14,
+        fontFace: SANS, fontSize: 12.5, bold: true, color: C.TXT });
+
+    chain(L3 + 0.15, 0.68, [
+        ['Read', 'Incidents open in the last 2 hours, plus their Events rows. Imports Plumbing.psm1 and nothing else.', { sans: true }],
+        ['Shape', '?view= raw · summary · sources · tree · incidents · symptoms - one per visual on the workbook.', { sans: true }],
+        ['Answer', 'JSON the workbook can colour. No correlation logic lives here; it is presentation only.', { sans: true }],
+    ], 0.35);
+
+    s.addText([
+        { text: 'The first two questions are not two passes. ', options: { bold: true, color: C.TXT } },
+        { text: 'They are the two halves of one row address - ', options: { color: C.MUT } },
+        { text: 'Events(PartitionKey = incident id, RowKey = fingerprint)', options: { fontFace: MONO, color: C.AMB } },
+        { text: ' - and the code works out the incident before the symptom.', options: { color: C.MUT } },
+    ], {
+        x: M, y: L3 + L3H + 0.12, w: CONTENT_W, h: 0.42, isTextBox: true, margin: 0, align: 'center',
+        valign: 'top', fontFace: SANS, fontSize: 11 });
+}
+
+{
+    // ------------------------------------------------------------------ B ----
+    const s = d.slide(
+        'The catalogue. Do not read it aloud; let it sit while you say the one sentence at the bottom. The thing to point at is the same-symptom row: one function, four lines, and the middle row - the plumbing - which is its own module now and knows nothing about correlation.'
+    );
+    d.head(s, 'every function, by job', 'Which function answers which question');
+
+    const LW = 2.35;
+    const line = (name, desc, last) => ([
+        { text: name, options: { fontFace: MONO, fontSize: 10, bold: true, color: C.TXT } },
+        { text: '   ' + desc, options: { fontFace: SANS, fontSize: 10, color: C.MUT, breakLine: !last } },
+    ]);
+
+    const rows = [
+        {
+            h: 0.95, role: 'Normalise', mod: 'Normalize.psm1 (10)',
+            lines: [
+                ['ConvertTo-PipelineEvent', 'the entry point: sniffs the payload shape and hands off'],
+                ['ConvertFrom-AppInsightsRecord · -AzureMonitorAlert · -ScriptEvent', 'one per shape'],
+                ['Get-HostFromTarget', 'a dependency’s Target becomes the host, so the app’s failed call joins the server’s incident'],
+                ['Get-Field · Get-ExceptionMessage · Format-Time · New-PipelineEvent', 'helpers'],
+            ]
+        },
+        {
+            h: 0.66, role: 'Same symptom?', chip: ['question 1', C.AMB], mod: 'Correlation.psm1',
+            lines: [
+                ['Get-Fingerprint', 'SHA256 of source | kind | title with digits → N | resource | host.  Four lines. The whole answer.'],
+            ]
+        },
+        {
+            h: 0.95, role: 'Same incident?', chip: ['question 2', C.AMB], mod: 'Correlation.psm1',
+            lines: [
+                ['Get-PrimaryKey · Get-IncidentId', 'the one key that decides the incident, and the id derived from it'],
+                ['Get-EventKey', 'every key the event carries, for the “correlated on” line'],
+                ['Add-EventToIncident', 'the orchestrator - the only thing IngestEvents calls after archiving'],
+                ['New-Incident · Write-RawEvent', 'the writes; neither is conditional'],
+            ]
+        },
+        {
+            h: 0.78, role: 'Plumbing', mod: 'Plumbing.psm1 (9)', roleColor: C.DIM,
+            lines: [
+                ['Invoke-Table · Get-TableRow · Get-OpenIncident · Measure-Incident', 'Table Storage over REST, and the totals the incident row does not store'],
+                ['Get-ResourceToken · Get-StorageToken', 'managed identity, one token per resource, cached'],
+                ['Get-HttpStatus · ConvertTo-TableLiteral · ConvertTo-Utc', 'the small conversions everyone leans on'],
+            ]
+        },
+        {
+            h: 0.95, role: 'Same problem?', chip: ['question 3', C.RED], mod: 'Ai.psm1 (5)',
+            lines: [
+                ['Invoke-IncidentAnalysis', 'the pass: fetch, skip if quiet, brief, ask, write back'],
+                ['Get-IncidentBrief', 'what the model is allowed to see'],
+                ['Invoke-OpenAI · ConvertFrom-ModelJson', 'the one call, and the JSON it must return'],
+                ['Write-IncidentVerdict', 'one incident’s verdict, a plain merge - it sends no counters'],
+            ]
+        },
+        {
+            h: 0.66, role: 'Presentation', mod: 'GetIncidents/run.ps1', roleColor: C.BLU,
+            lines: [
+                ['six ?view= shapes', 'raw · summary · sources · tree · incidents · symptoms'],
+                ['Format-Count · Format-Age · Write-Json · Get-TableRow', 'local helpers - that last one is a filter query, not the module’s point read'],
+            ]
+        },
+    ];
+
+    let y = 1.52;
+    rows.forEach(r => {
+        d.card(s, M, y, CONTENT_W, r.h);
+        s.addText(r.role, { x: M + 0.22, y: y + 0.11, w: LW - 0.3, h: 0.26, isTextBox: true, margin: 0,
+            fontFace: SANS, fontSize: 13, bold: true, color: r.roleColor || C.TXT });
+        if (r.chip) d.chip(s, M + 0.22, y + 0.40, 0.85, r.chip[0], r.chip[1]);
+        s.addText(r.mod, { x: M + 0.22 + (r.chip ? 0.93 : 0), y: y + 0.40, w: LW - 0.3 - (r.chip ? 0.93 : 0), h: 0.22,
+            isTextBox: true, margin: 0, fontFace: MONO, fontSize: r.chip ? 8 : 8.5, color: C.DIM });
+        const runs = [];
+        r.lines.forEach((l, i) => runs.push(...line(l[0], l[1], i === r.lines.length - 1)));
+        s.addText(runs, { x: M + LW, y: y + 0.08, w: CONTENT_W - LW - 0.2, h: r.h - 0.14,
+            isTextBox: true, margin: 0, valign: 'top', lineSpacing: 15 });
+        y += r.h + 0.11;
+    });
+
+    s.addText('35 functions. Three of them decide what belongs together. One of them talks to a model.', {
+        x: M, y: y + 0.02, w: CONTENT_W, h: 0.3, isTextBox: true, margin: 0, align: 'center',
         fontFace: SANS, fontSize: 12, color: C.DIM, italic: true });
 }
 
@@ -251,7 +458,7 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
     const s = d.slide(
         'Three sources, three completely different JSON shapes, and none of them agree on what a field is called. This is the unglamorous half of any pipeline like this and it is worth saying so - people underestimate it every time.'
     );
-    d.head(s, 'pipeline.psm1  ·  176 lines', 'Three shapes, one object', { eyebrowColor: C.BLU });
+    d.head(s, 'normalize.psm1  ·  122 lines', 'Three shapes, one object', { eyebrowColor: C.BLU });
 
     const h2 = d.codePanel(s, M, 1.95, 7.6, null, null, [
         ['function Get-PayloadShape {', C.TXT],
@@ -279,70 +486,78 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
 }
 
 // -----------------------------------------------------------------------------
-// C3. Dedup
+// C3. Same symptom? - concept and code on one slide
 // -----------------------------------------------------------------------------
 {
     const s = d.slide(
-        'Layer one, in full. Three lines. Say plainly that this is the entire deduplication engine and that it involves no intelligence of any kind - it is a hash of a string with the numbers taken out.'
+        'Question one, in full. Three lines. Say plainly that this is the entire deduplication engine and that it involves no intelligence of any kind - it is a hash of a string with the numbers taken out. Then be honest about the cost: "Port 22 closed" and "Port 443 closed" collapse together too. Worth it.'
     );
-    d.head(s, 'correlation.psm1  ·  the whole of layer one', 'Deduplication is three lines');
+    d.head(s, 'correlation.psm1  ·  is this the same symptom?', 'Deduplication is three lines');
 
     const h3 = d.codePanel(s, M, 1.95, CONTENT_W, null, null, [
         ['$title = $Event.Title -replace \'\\d+\', \'N\'          # 480 ms and 8 ms are the same symptom', C.AMB],
-        ['', C.MUT],
         ['$seed  = "$Source|$Kind|$title|$ResourceId|$Host".ToLowerInvariant()', C.TXT],
-        ['', C.MUT],
         ['$hash  = [Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($seed))', C.TXT],
     ], { size: 14 });
 
-    const y3 = 1.95 + h3 + 0.35;
-    d.card(s, M, y3, 5.75, 1.9);
+    const y3 = 1.95 + h3 + 0.3, ch = 1.95;
+    d.card(s, M, y3, 5.75, ch);
     s.addText('What goes in', {
-        x: M + 0.35, y: y3 + 0.17, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
-        fontFace: SANS, fontSize: 16, bold: true, color: C.MUT });
-    s.addText('Disk read latency 410 ms, sustained\nDisk read latency 455 ms, sustained\nDisk read latency 480 ms, sustained', {
-        x: M + 0.35, y: y3 + 0.57, w: 5.05, h: 1.1, isTextBox: true, margin: 0, lineSpacing: 19,
-        fontFace: MONO, fontSize: 12, color: C.MUT });
+        x: M + 0.35, y: y3 + 0.15, w: 5.05, h: 0.32, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 15, bold: true, color: C.MUT });
+    s.addText(['410', '455', '480', '512', '498', '466'].map(n => `Disk read latency ${n} ms, sustained`).join('\n'), {
+        x: M + 0.35, y: y3 + 0.5, w: 5.05, h: 1.4, isTextBox: true, margin: 0, lineSpacing: 16,
+        fontFace: MONO, fontSize: 11, color: C.MUT });
 
-    d.card(s, 6.95, y3, 5.75, 1.9, C.PANEL2);
+    s.addText('>', { x: 6.45, y: y3 + 0.7, w: 0.5, h: 0.5, isTextBox: true, margin: 0, align: 'center',
+        fontFace: SANS, fontSize: 26, bold: true, color: C.AMB });
+
+    d.card(s, 6.95, y3, 5.75, ch, C.PANEL2);
     s.addText('What comes out', {
-        x: 7.3, y: y3 + 0.17, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
-        fontFace: SANS, fontSize: 16, bold: true, color: C.GRN });
+        x: 7.3, y: y3 + 0.15, w: 5.05, h: 0.32, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 15, bold: true, color: C.GRN });
     s.addText('Disk read latency N ms, sustained', {
-        x: 7.3, y: y3 + 0.6, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
+        x: 7.3, y: y3 + 0.62, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
         fontFace: MONO, fontSize: 13, color: C.TXT });
-    s.addText('one row  ·  seen 3 times', {
-        x: 7.3, y: y3 + 1.1, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
-        fontFace: SANS, fontSize: 15, bold: true, color: C.AMB });
+    s.addText('one row  ·  seen 6 times', {
+        x: 7.3, y: y3 + 1.12, w: 5.05, h: 0.35, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 16, bold: true, color: C.AMB });
+
+    d.callout(s, y3 + ch + 0.22, [
+        { text: 'Every run of digits collapses.  ', options: { bold: true, color: C.WHT } },
+        { text: 'Durations, counts, percentages and addresses are values, not identities - 300 identical ' +
+                'checkout failures become one row with a count, not 300 rows.  ', options: { color: C.MUT } },
+        { text: 'The honest cost: ', options: { bold: true, color: C.AMB } },
+        { text: '"Port 22 closed" and "Port 443 closed" collapse together too.', options: { color: C.MUT } },
+    ], { h: 1.0, size: 14 });
 }
 
 // -----------------------------------------------------------------------------
-// C4. Derived identity
+// C4. Same incident? - the code and the one idea behind it
 // -----------------------------------------------------------------------------
 {
     const s = d.slide(
-        'Layer two. The ordering is the interesting bit - trace is last on purpose because every request has its own, so it is the worst grouping key available. Then the id is derived from the key rather than generated, which is what makes the whole thing safe under concurrency.'
+        'Question two. Read the four lines top to bottom: host if there is one, otherwise the Azure resource, otherwise the service. Trace is last on purpose - every request has its own, so it is the worst thing to group on. Then the last line: the incident id is just a hash of that key. Same host, same id, every time. No lookup.'
     );
-    d.head(s, 'correlation.psm1  ·  the whole of layer two', 'Identity is derived, not invented');
+    d.head(s, 'correlation.psm1  ·  is this the same incident?', 'Identity is derived, not invented');
 
     const h4 = d.codePanel(s, M, 1.95, CONTENT_W, null, null, [
         ['function Get-PrimaryKey {', C.TXT],
-        ['    if ($Event.Host)       { return "host:$($Event.Host)" }', C.AMB],
-        ['    if ($Event.ResourceId) { return "resource:$($Event.ResourceId)" }', C.MUT],
-        ['    if ($Event.Service)    { return "service:$($Event.Service)" }', C.MUT],
-        ['    if ($Event.TraceId)    { return "trace:$($Event.TraceId)" }   # last: one per request', C.DIM],
+        ['    if ($Event.Host)       { return "host:$($Event.Host)" }             # a machine name', C.AMB],
+        ['    if ($Event.ResourceId) { return "resource:$($Event.ResourceId)" }   # an Azure resource', C.MUT],
+        ['    if ($Event.Service)    { return "service:$($Event.Service)" }       # a role, when there is no host', C.MUT],
+        ['    if ($Event.TraceId)    { return "trace:$($Event.TraceId)" }         # last: one per request', C.DIM],
         ['}', C.TXT],
         ['', C.MUT],
         ['$incidentId = \'inc-\' + (Sha256 $primaryKey).Substring(0, 12)', C.GRN],
-    ], { size: 15 });
+    ], { size: 13 });
 
     d.callout(s, 1.95 + h4 + 0.35, [
-        { text: 'Two workers, one row. ', options: { bold: true, color: C.GRN } },
-        { text: 'The hub has two partitions, so two invocations correlate the same host at the same ' +
-                'instant. Because the id is computed from the key rather than generated, they both ' +
-                'write to the same incident - and the loser of the race gets a 409 it can ignore.',
+        { text: 'First match wins, and the id is a hash of it. ', options: { bold: true, color: C.GRN } },
+        { text: 'Four tools reporting sql-prod-03 all produce the same key, so they all produce the same incident id - ' +
+                'nothing is looked up, nothing is generated, nothing can drift. The same host always lands in the same incident.',
           options: { color: C.TXT } },
-    ], { h: 1.25, size: 15 });
+    ], { h: 1.3, size: 16 });
 }
 
 // -----------------------------------------------------------------------------
@@ -383,20 +598,21 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
     const s = d.slide(
         'The closing code slide, and the one that makes the argument. Ninety-seven percent of the code is not AI. If they remember one number from the technical half of the session, make it this one.'
     );
-    d.head(s, '1,151 lines of powershell', 'Where the lines actually are');
+    d.head(s, '912 lines of powershell', 'Where the lines actually are');
 
     const parts = [
-        ['Deterministic correlation', 'Correlation.psm1', 348, C.AMB],
-        ['The AI stage',              'Ai.psm1',          290, C.RED],
-        ['The dashboard endpoint',    'GetIncidents',     272, C.BLU],
-        ['Normalising three shapes',  'Pipeline.psm1',    176, C.BLU],
-        ['The Event Hubs trigger',    'IngestEvents',      34, C.GRN],
+        ['The dashboard endpoint',    'GetIncidents',     256, C.BLU],
+        ['The AI stage (100 is the prompt)', 'Ai.psm1',   244, C.RED],
+        ['Deterministic correlation', 'Correlation.psm1', 138, C.AMB],
+        ['Normalising three shapes',  'Normalize.psm1',   122, C.BLU],
+        ['Table Storage plumbing',    'Plumbing.psm1',     88, C.DIM],
+        ['The Event Hubs trigger',    'IngestEvents',      33, C.GRN],
         ['Timer + HTTP triggers',     'Analyze*',          31, C.GRN],
     ];
-    const maxLines = 348, barMax = 5.4, x0 = 5.9;
+    const maxLines = 256, barMax = 5.4, x0 = 5.9;
 
     parts.forEach((p, i) => {
-        const y = 1.95 + i * 0.62;
+        const y = 1.95 + i * 0.52;
         s.addText(p[0], { x: M, y: y + 0.02, w: 3.3, h: 0.35, isTextBox: true, margin: 0,
             fontFace: SANS, fontSize: 15, color: C.TXT });
         s.addText(p[1], { x: M + 3.35, y: y + 0.05, w: 1.9, h: 0.3, isTextBox: true, margin: 0,

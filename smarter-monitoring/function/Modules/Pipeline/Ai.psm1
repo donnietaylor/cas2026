@@ -1,7 +1,7 @@
 <#
-    The second correlation stage: the one that needs a model.
+    The third question: is this the same PROBLEM as that other incident?
 
-    The deterministic layer already did everything that can be done with facts -
+    Correlation.psm1 already did everything that can be done with facts -
     same fingerprint, same host, same resource. What it cannot do is read
     "Nightly backup of sql-prod-03 still running" on backup-01 and connect it to
     "Disk read latency 480 ms" on sql-prod-03, because those two share no key.
@@ -19,11 +19,11 @@
     firewall's packet loss during carrier maintenance is there to be left alone.
 
     Results are written back onto the incident rows. Nothing here creates or
-    merges incidents - the deterministic layer owns identity, and a model that
+    merges incidents - Correlation.psm1 owns identity, and a model that
     can rewrite identity is a model that can lose your data.
 #>
 
-Import-Module (Join-Path $PSScriptRoot 'Correlation.psm1')
+Import-Module (Join-Path $PSScriptRoot 'Plumbing.psm1')
 
 $script:MetaPartition = 'meta'
 $script:MetaRow = 'analysis'
@@ -79,7 +79,7 @@ function ConvertFrom-ModelJson {
 $script:SystemPrompt = @'
 You are the correlation stage of an IT monitoring pipeline. You are given the
 incidents that are currently open. Each one has already been de-duplicated and
-grouped by a deterministic layer using shared hosts and resources, so incidents
+grouped by shared hosts and resources, so incidents
 that share a host are ALREADY one incident. Your job is the part that needs
 judgement.
 
@@ -179,8 +179,11 @@ function Get-IncidentBrief {
 
     $brief = foreach ($incident in $Incidents) {
         $filter = [uri]::EscapeDataString("PartitionKey eq '$(ConvertTo-TableLiteral $incident.RowKey)'")
-        $symptoms = @((Invoke-Table -Method Get -Path "Events()?`$filter=$filter").value) |
-            Sort-Object { [int]$_.Count } -Descending | Select-Object -First $MaxSymptoms
+        $all = @((Invoke-Table -Method Get -Path "Events()?`$filter=$filter").value)
+        # Attaches Severity, Title and the totals to $incident; the caller's
+        # copy is the same object, so it can read the headline back later.
+        $null = Measure-Incident -Incident $incident -Symptoms $all
+        $symptoms = $all | Sort-Object { [int]$_.Count } -Descending | Select-Object -First $MaxSymptoms
 
         [ordered]@{
             id        = "$($incident.RowKey)"
@@ -208,8 +211,8 @@ function Get-IncidentBrief {
 function Write-IncidentVerdict {
     <#
     .SYNOPSIS
-        Write one incident's verdict back. Conditional on the ETag so a merge
-        landing at the same moment as an incoming event cannot clobber its counts.
+        Write one incident's verdict back. A merge only touches the fields it
+        sends, and none of these is a counter, so it is unconditional.
 
         TouchedAt is deliberately NOT set here. It is the "changed since the last
         analysis" marker; setting it would make every pass schedule the next one.
@@ -217,17 +220,10 @@ function Write-IncidentVerdict {
     param([Parameter(Mandatory)][string]$IncidentId, [Parameter(Mandatory)][hashtable]$Fields)
 
     $path = "Incidents(PartitionKey='incident',RowKey='$(ConvertTo-TableLiteral $IncidentId)')"
-    for ($attempt = 1; $attempt -le 4; $attempt++) {
-        $row = Get-TableRow -Table 'Incidents' -Partition 'incident' -Row $IncidentId
-        if (-not $row) { return }
-        try {
-            $null = Invoke-Table -Method Merge -Path $path -Body $Fields -IfMatch $row.'odata.etag'
-            return
-        }
-        catch {
-            if ((Get-HttpStatus $_) -ne 412 -or $attempt -eq 4) { throw }
-            Start-Sleep -Milliseconds (50 * $attempt)
-        }
+    try { $null = Invoke-Table -Method Merge -Path $path -Body $Fields }
+    catch {
+        # 404: the row was reset out from under us mid-pass. Nothing to say.
+        if ((Get-HttpStatus $_) -ne 404) { throw }
     }
 }
 

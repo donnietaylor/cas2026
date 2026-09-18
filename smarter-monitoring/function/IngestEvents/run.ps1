@@ -3,7 +3,7 @@ param($eventHubMessages, $TriggerMetadata)
 # Read the hub, normalize, drop successes, correlate into incidents.
 # The AI pass runs separately, over the incidents this produces.
 
-Import-Module (Join-Path $PSScriptRoot '..' 'Modules' 'Pipeline' 'Pipeline.psm1')
+Import-Module (Join-Path $PSScriptRoot '..' 'Modules' 'Pipeline' 'Normalize.psm1')
 Import-Module (Join-Path $PSScriptRoot '..' 'Modules' 'Pipeline' 'Correlation.psm1')
 
 # Write-Host, not Write-Information: the Functions PowerShell worker leaves
@@ -23,7 +23,6 @@ foreach ($message in @($eventHubMessages)) {
         catch { Write-Warning "Skipped a message that isn't JSON."; continue }
     }
 
-    Write-RawSample $payload
 
     foreach ($pipelineEvent in @(ConvertTo-PipelineEvent -Payload $payload)) {
         if ($pipelineEvent.Success) { $dropped++; continue }

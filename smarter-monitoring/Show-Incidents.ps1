@@ -50,6 +50,8 @@ $since = [DateTime]::UtcNow.AddHours(-$Hours).ToString('o')
 $filter = "LastSeen ge '$since'"
 if (-not $All) { $filter += " and Status eq 'open'" }
 
+Import-Module (Join-Path $PSScriptRoot 'function' 'Modules' 'Pipeline' 'Plumbing.psm1')   # Measure-Incident
+
 $incidents = Get-Rows -Table 'Incidents' -Filter $filter | Sort-Object FirstSeen
 if (-not $incidents) {
     Write-Host "No incidents in the last $Hours hour(s)." -ForegroundColor DarkGray
@@ -59,6 +61,8 @@ if (-not $incidents) {
 $severityColor = @{ critical = 'Red'; error = 'Red'; warning = 'Yellow'; info = 'Gray' }
 
 foreach ($incident in $incidents) {
+    $symptoms = @(Get-Rows -Table 'Events' -Filter "PartitionKey eq '$($incident.RowKey)'" | Sort-Object FirstSeen)
+    $null = Measure-Incident -Incident $incident -Symptoms $symptoms
     $color = $severityColor[[string]$incident.Severity] ?? 'Gray'
     $first = ([datetime]$incident.FirstSeen).ToLocalTime().ToString('HH:mm:ss')
     $last = ([datetime]$incident.LastSeen).ToLocalTime().ToString('HH:mm:ss')
@@ -86,7 +90,7 @@ foreach ($incident in $incidents) {
     }
 
     Write-Host ''
-    foreach ($symptom in (Get-Rows -Table 'Events' -Filter "PartitionKey eq '$($incident.RowKey)'" | Sort-Object FirstSeen)) {
+    foreach ($symptom in $symptoms) {
         $where = if ($symptom.Host) { $symptom.Host } elseif ($symptom.Service) { $symptom.Service } else { '-' }
         Write-Host ('    x{0,-4} {1,-12} {2,-16} {3}' -f `
                 $symptom.Count, $symptom.Source, $where, $symptom.Title) -ForegroundColor DarkGray

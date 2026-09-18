@@ -24,7 +24,7 @@ param($Request, $TriggerMetadata)
     of them is an error in the browser.
 #>
 
-Import-Module (Join-Path $PSScriptRoot '..' 'Modules' 'Pipeline' 'Correlation.psm1')
+Import-Module (Join-Path $PSScriptRoot '..' 'Modules' 'Pipeline' 'Plumbing.psm1')
 
 $severityRank = @{ critical = 4; error = 3; warning = 2; info = 1; normal = 0 }
 
@@ -34,7 +34,8 @@ $hours = 2
 if ($Request.Query.hours) { $hours = [int]$Request.Query.hours }
 $cutoff = [DateTime]::UtcNow.AddHours(-$hours).ToString('o')
 
-function Get-TableRow {
+function Find-TableRow {
+    # A filter query. Not the module's Get-TableRow, which is a point read.
     param([string]$Table, [string]$Filter)
     $escaped = [uri]::EscapeDataString($Filter)
     return @((Invoke-Table -Method Get -Path "$Table()?`$filter=$escaped").value)
@@ -69,7 +70,7 @@ function Write-Json {
 
 # --- Load ------------------------------------------------------------------
 try {
-    $incidents = @(Get-TableRow -Table 'Incidents' -Filter "Status eq 'open' and LastSeen ge '$cutoff'")
+    $incidents = @(Find-TableRow -Table 'Incidents' -Filter "Status eq 'open' and LastSeen ge '$cutoff'")
 
     # One read of the symptom table, then group in memory. Cheaper than a query
     # per incident, and this endpoint gets hit every time the workbook refreshes.
@@ -77,12 +78,18 @@ try {
     # Filter on our own LastSeen string, not the system Timestamp: it is plain
     # ISO-8601, so a string comparison sorts correctly and there is no datetime
     # literal syntax to get wrong.
-    if ($incidents.Count) { $allSymptoms = @(Get-TableRow -Table 'Events' -Filter "LastSeen ge '$cutoff'") }
+    if ($incidents.Count) { $allSymptoms = @(Find-TableRow -Table 'Events' -Filter "LastSeen ge '$cutoff'") }
     $byIncident = @{}
     foreach ($symptom in $allSymptoms) {
         $key = "$($symptom.PartitionKey)"
         if (-not $byIncident.ContainsKey($key)) { $byIncident[$key] = [System.Collections.Generic.List[object]]::new() }
         $byIncident[$key].Add($symptom)
+    }
+
+    # Severity, headline and totals are not stored on the incident row; they
+    # are worked out from its symptoms here, the same way the AI brief does it.
+    foreach ($incident in $incidents) {
+        $null = Measure-Incident -Incident $incident -Symptoms @($byIncident["$($incident.RowKey)"])
     }
 
     $ordered = $incidents | Sort-Object `
