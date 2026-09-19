@@ -16,11 +16,23 @@ function Add-Check {
 Add-Check 'PowerShell 7+' ($PSVersionTable.PSVersion.Major -ge 7) $PSVersionTable.PSVersion.ToString()
 Add-Check 'Running on Windows' $IsWindows 'CIM, registry, netstat and quser demos need it'
 
-$python = Get-Command python -ErrorAction SilentlyContinue
-Add-Check 'Python present' ([bool]$python) $(if ($python) { (python --version 2>&1) } else { 'not found' })
+# Prefer host\.venv over whatever 'python' happens to be on PATH: a fresh terminal
+# has the global interpreter, which does not have the host's dependencies.
+$venvPython = Join-Path $PSScriptRoot 'host' '.venv' 'Scripts' 'python.exe'
+if (Test-Path $venvPython) {
+    $pythonExe = $venvPython
+    $pySource  = 'host\.venv'
+}
+else {
+    $pythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
+    $pySource  = 'PATH (no venv found)'
+}
+Add-Check 'Python present' ([bool]$pythonExe) $(if ($pythonExe) { '{0} from {1}' -f ((& $pythonExe --version 2>&1 | Out-String).Trim()), $pySource } else { 'not found' })
 
-$mcp = python -c "import mcp, fastapi; print('ok')" 2>&1
-Add-Check 'Python deps installed' ($mcp -match 'ok') "$mcp"
+# Out-String collapses this to ONE string. Array -match returns matching elements,
+# not a boolean, and Add-Check then chokes on an Object[].
+$depOut = if ($pythonExe) { (& $pythonExe -c "import mcp, fastapi; print('ok')" 2>&1 | Out-String).Trim() } else { 'no interpreter' }
+Add-Check 'Python deps installed' ([bool]($depOut -match 'ok')) $depOut
 
 $manifestRaw = & (Join-Path $PSScriptRoot 'powershell' 'Get-ToolManifest.ps1') 2>&1
 try {
