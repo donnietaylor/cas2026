@@ -8,7 +8,7 @@ separate problems, or one problem wearing four costumes?
 
 Most of the reduction happens before the model is involved. That is the argument.
 
-**[→ Slides](./deck/smarter-monitoring.pptx)**
+**[→ Slides](./slides/smarter-monitoring.pptx)**
 
 ## How it works
 

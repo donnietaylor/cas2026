@@ -55,7 +55,7 @@ cas2026/
     ├── function/          PowerShell Function App - 4 functions + Pipeline modules
     ├── store-api/         Flask app instrumented with the Azure Monitor OTel distro
     ├── workbook/          Azure Workbook definition (the dashboard)
-    ├── deck/              Slides + generator
+    ├── slides/            Slides + generator
     └── *.ps1              Deploy, publish, send events, break things, reset
 ```
 

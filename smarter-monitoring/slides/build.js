@@ -788,5 +788,5 @@ gifSlide({
     notes: 'HIDE THIS SLIDE. Then learn where it is in the deck so you can jump to it by number. Having a prepared joke for a broken demo reads as confidence; scrambling reads as panic. After the laugh, go to the appendix screenshots and narrate what would have happened.'
 });
 
-pres.writeFile({ fileName: '/home/claude/deck/smarter-monitoring.pptx' })
+pres.writeFile({ fileName: 'smarter-monitoring.pptx' })
     .then(f => console.log('wrote', f));
