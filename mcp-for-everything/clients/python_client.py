@@ -1,7 +1,5 @@
-"""
-    .\host\.venv\Scripts\python.exe .\clients\python_client.py
-"""
 
+#     .\host\.venv\Scripts\python.exe .\clients\python_client.py
 import asyncio
 
 from mcp import ClientSession
