@@ -23,16 +23,19 @@ live.
 
 ## Session 2 — Smarter Monitoring: Building an AI-Enhanced Event Pipeline
 
-Azure Monitor, OpenTelemetry and third-party webhooks land in Event Hubs. A
-PowerShell Function App normalizes them, correlates them **deterministically** on
-trace ID and resource ID, grounds them in Resource Graph and Log Analytics facts,
-and only then asks Azure OpenAI for judgment. Out the other end: deduplicated,
-ServiceNow-shaped incidents.
+App Insights telemetry, an Azure Monitor alert and a third-party script land in one
+Event Hub. A PowerShell Function App normalizes them, drops the successes, and
+correlates the rest into incidents **deterministically** - by fingerprint, host and
+resource, with incident ids derived from the correlation key so parallel workers
+converge on the same row. Only then does Azure OpenAI get asked the one question
+facts cannot answer: which of these separate incidents are one problem, and which
+are genuinely unrelated.
 
-12 raw payloads → 14 events → 5 groups → 5 incidents, and most of that reduction
-happens before any model is involved.
+Correlation state lives in Azure Table Storage; the result is an Azure Workbook that
+names a cause nobody sent it. Most of the reduction happens before the model is
+involved.
 
-**[→ Session materials](./smarter-monitoring/)** · **[→ Run of show](./smarter-monitoring/demos/00-run-of-show.md)**
+**[→ Session materials](./smarter-monitoring/)**
 
 ---
 
@@ -49,36 +52,35 @@ cas2026/
 │   ├── docs/              Setup, security
 │   └── fallback/          Scripts to paste when live typing goes wrong
 └── smarter-monitoring/
-    ├── function/          PowerShell Azure Function (Event Hub trigger)
-    ├── powershell/        Pipeline modules + local replay harness
-    ├── otel-demo/         Instrumented app + OTel Collector config
-    ├── data/              Recorded outage scenario
-    ├── demos/             Run of show
-    └── docs/              Azure setup + teardown
+    ├── function/          PowerShell Function App - 4 functions + Pipeline modules
+    ├── store-api/         Flask app instrumented with the Azure Monitor OTel distro
+    ├── workbook/          Azure Workbook definition (the dashboard)
+    ├── deck/              Slides + generator
+    └── *.ps1              Deploy, publish, send events, break things, reset
 ```
 
 ## Running without an Azure subscription
 
-Both sessions run offline, which is also how you rehearse on a plane and how you
-survive dead conference wifi.
+Session 1 does, which is how you rehearse on a plane and how you survive dead
+conference wifi:
 
 ```powershell
-# Session 1 - the SQL tool returns canned data, everything else is real
+# the SQL tool returns canned data, everything else is real
 $env:CAS_DEMO_MODE = 'true'
 cd mcp-for-everything; .\Start-Demo.ps1
-
-# Session 2 - full pipeline against a recorded scenario, no cloud at all
-cd smarter-monitoring\powershell
-.\Invoke-LocalPipeline.ps1 -Offline -ShowStages
 ```
+
+Session 2 does not. Its correlation state lives in Azure Table Storage and its
+analysis calls Azure OpenAI, so it needs the subscription. Rehearse it on tethering
+and keep screenshots.
 
 ## Prerequisites
 
 - **PowerShell 7.4+** (`winget install Microsoft.PowerShell`) — not Windows
   PowerShell 5.1
 - **Python 3.11+** — session 1 host and the OTel demo app
-- An Azure subscription for the live versions
-  ([session 2 setup](./smarter-monitoring/docs/azure-setup.md))
+- An Azure subscription for session 2
+  ([setup and run order](./smarter-monitoring/README.md#running-it))
 
 ## License
 

@@ -50,10 +50,18 @@ if ($DemoMode) {
 
 $env:PORT = $Port
 
+# The host's dependencies live in host\.venv. Use that interpreter directly rather
+# than relying on the terminal having been activated - on stage it will not have been.
+$venvPython = Join-Path $host_dir '.venv' 'Scripts' 'python.exe'
+$pythonExe  = if (Test-Path $venvPython) { $venvPython } else { 'python' }
+if (-not (Test-Path $venvPython)) {
+    Write-Host 'No host\.venv found - falling back to python on PATH.' -ForegroundColor Yellow
+}
+
 Push-Location $host_dir
 try {
     Write-Host "MCP endpoint : http://localhost:$Port/mcp"     -ForegroundColor Cyan
     Write-Host "Health       : http://localhost:$Port/healthz`n" -ForegroundColor Cyan
-    python -m uvicorn app:app --host 127.0.0.1 --port $Port
+    & $pythonExe -m uvicorn app:app --host 127.0.0.1 --port $Port
 }
 finally { Pop-Location }
