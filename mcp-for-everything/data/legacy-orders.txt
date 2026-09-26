@@ -1,15 +1,75 @@
 REPORT: NIGHTLY ORDER EXTRACT          RUN 2026-08-17 02:00:14   PAGE 0001
-ORDER ID  CUSTOMER                    ORDERDATE STATUS    AMOUNT      REGION
---------------------------------------------------------------------------------
-ORD-004417Contoso Manufacturing       2026-08-11SHIPPED   18450.00    CENTRAL   
-ORD-004418Fabrikam Residences         2026-08-12OPEN      2295.50     WEST      
-ORD-004419Northwind Traders           2026-08-12HELD      97300.25    EAST      
-ORD-004420Tailspin Toys               2026-08-13OPEN      640.00      CENTRAL   
-ORD-004421Adventure Works Cycles      2026-08-13CANCELLED 1180.75     WEST      
-ORD-004422Woodgrove Bank              2026-08-14HELD      54120.00    EAST      
-ORD-004423Proseware Inc               2026-08-14SHIPPED   8990.10     SOUTH     
-ORD-004424Litware Holdings            2026-08-15OPEN      233400.00   EAST      
-ORD-004425VanArsdel Ltd               2026-08-15SHIPPED   412.99      WEST      
-ORD-004426Relecloud Services          2026-08-16HELD      76500.00    CENTRAL   
---------------------------------------------------------------------------------
-TOTAL RECORDS: 10
+ORDER ID  CUSTOMER                    ORDERDATE STATUS    AMOUNT      REGION    PROD# QTY
+---------------------------------------------------------------------------------------------
+ORD-004371Tailspin Toys               2026-08-03SHIPPED   864.00      CENTRAL   00009 18     
+ORD-004372VanArsdel Ltd               2026-08-03SHIPPED   3216.00     SOUTH     00009 67     
+ORD-004373Fourth Coffee               2026-08-03SHIPPED   903.00      SOUTH     00010 7      
+ORD-004374Tailspin Toys               2026-08-03SHIPPED   179.88      CENTRAL   00008 12     
+ORD-004375Southridge Video            2026-08-03SHIPPED   2218.89     SOUTH     00004 111    
+ORD-004376A. Datum Corporation        2026-08-03CANCELLED 2650.00     CENTRAL   00006 212    
+ORD-004377Munson's Pickles and Preserv2026-08-04SHIPPED   3798.48     EAST      00002 152    
+ORD-004378School of Fine Art          2026-08-04SHIPPED   8053.75     CENTRAL   00003 1895   
+ORD-004379Alpine Ski House            2026-08-04SHIPPED   14473.90    CENTRAL   00012 12586  
+ORD-004380Consolidated Messenger      2026-08-04SHIPPED   8721.51     SOUTH     00007 2499   
+ORD-004381School of Fine Art          2026-08-04SHIPPED   7587.26     SOUTH     00007 2174   
+ORD-004382Alpine Ski House            2026-08-04HELD      1920.00     WEST      00009 40     
+ORD-004383Wingtip Toys                2026-08-05SHIPPED   1824.00     SOUTH     00009 38     
+ORD-004384Graphic Design Institute    2026-08-05SHIPPED   1338.66     SOUTH     00001 134    
+ORD-004385Adventure Works Cycles      2026-08-05CANCELLED 864.00      EAST      00009 18     
+ORD-004386Fourth Coffee               2026-08-05HELD      374.75      CENTRAL   00008 25     
+ORD-004387Wingtip Toys                2026-08-06SHIPPED   1019.32     SOUTH     00008 68     
+ORD-004388Blue Yonder Airlines        2026-08-06HELD      2997.00     SOUTH     00001 300    
+ORD-004389Tailspin Toys               2026-08-06SHIPPED   21135.85    SOUTH     00012 18379  
+ORD-004390A. Datum Corporation        2026-08-06SHIPPED   3293.00     SOUTH     00005 37     
+---------------------------------------------------------------------------------------------
+CONTINUED ON PAGE 0002
+
+REPORT: NIGHTLY ORDER EXTRACT          RUN 2026-08-17 02:00:14   PAGE 0002
+ORDER ID  CUSTOMER                    ORDERDATE STATUS    AMOUNT      REGION    PROD# QTY
+---------------------------------------------------------------------------------------------
+ORD-004391Alpine Ski House            2026-08-06SHIPPED   6536.77     SOUTH     00007 1873   
+ORD-004392Humongous Insurance         2026-08-06HELD      1725.00     CENTRAL   00012 1500   
+ORD-004393Litware Holdings            2026-08-07SHIPPED   359.64      CENTRAL   00001 36     
+ORD-004394Adventure Works Cycles      2026-08-07SHIPPED   1528.98     SOUTH     00008 102    
+ORD-004395Wide World Importers        2026-08-07HELD      23988.00    EAST      00004 1200   
+ORD-004396Litware Holdings            2026-08-07SHIPPED   2098.60     CENTRAL   00008 140    
+ORD-004397Margie's Travel             2026-08-08SHIPPED   1678.32     SOUTH     00001 168    
+ORD-004398City Power & Light          2026-08-08CANCELLED 3048.78     SOUTH     00002 122    
+ORD-004399Munson's Pickles and Preserv2026-08-08SHIPPED   4126.75     CENTRAL   00003 971    
+ORD-004400Margie's Travel             2026-08-08SHIPPED   1558.96     EAST      00008 104    
+ORD-004401Trey Research               2026-08-08HELD      13197.80    CENTRAL   00011 220    
+ORD-004402Tailspin Toys               2026-08-09SHIPPED   2439.51     WEST      00007 699    
+ORD-004403Lucerne Publishing          2026-08-09SHIPPED   2368.42     EAST      00008 158    
+ORD-004404School of Fine Art          2026-08-09SHIPPED   1459.27     EAST      00004 73     
+ORD-004405Tailspin Toys               2026-08-09SHIPPED   2136.00     EAST      00005 24     
+ORD-004406Adventure Works Cycles      2026-08-09SHIPPED   4902.00     EAST      00010 38     
+ORD-004407Margie's Travel             2026-08-10SHIPPED   2398.40     WEST      00008 160    
+ORD-004408Adventure Works Cycles      2026-08-10SHIPPED   5459.09     CENTRAL   00011 91     
+ORD-004409Lamna Healthcare            2026-08-10HELD      13350.00    SOUTH     00005 150    
+ORD-004410Adventure Works Cycles      2026-08-10SHIPPED   2470.92     CENTRAL   00007 708    
+---------------------------------------------------------------------------------------------
+CONTINUED ON PAGE 0003
+
+REPORT: NIGHTLY ORDER EXTRACT          RUN 2026-08-17 02:00:14   PAGE 0003
+ORDER ID  CUSTOMER                    ORDERDATE STATUS    AMOUNT      REGION    PROD# QTY
+---------------------------------------------------------------------------------------------
+ORD-004411Nod Publishers              2026-08-10OPEN      562.50      EAST      00006 45     
+ORD-004412Coho Winery                 2026-08-10HELD      1396.00     WEST      00007 400    
+ORD-004413Munson's Pickles and Preserv2026-08-11SHIPPED   2723.91     WEST      00002 109    
+ORD-004414Southridge Video            2026-08-11OPEN      2249.10     SOUTH     00002 90     
+ORD-004415Northwind Traders           2026-08-11SHIPPED   11398.10    EAST      00011 190    
+ORD-004416Wingtip Toys                2026-08-11OPEN      1874.25     WEST      00002 75     
+ORD-004417Contoso Manufacturing       2026-08-11SHIPPED   18450.00    CENTRAL   00006 1476   
+ORD-004418Fabrikam Residences         2026-08-12OPEN      2295.00     WEST      00003 540    
+ORD-004419Northwind Traders           2026-08-12HELD      97266.00    EAST      00010 754    
+ORD-004420Tailspin Toys               2026-08-13OPEN      639.40      CENTRAL   00012 556    
+ORD-004421Adventure Works Cycles      2026-08-13CANCELLED 1179.41     WEST      00004 59     
+ORD-004422Woodgrove Bank              2026-08-14HELD      54112.00    EAST      00005 608    
+ORD-004423Proseware Inc               2026-08-14SHIPPED   8976.00     SOUTH     00009 187    
+ORD-004424Litware Holdings            2026-08-15OPEN      233361.10   EAST      00011 3890   
+ORD-004425VanArsdel Ltd               2026-08-15SHIPPED   411.82      WEST      00007 118    
+ORD-004426Relecloud Services          2026-08-16HELD      76487.25    CENTRAL   00011 1275   
+---------------------------------------------------------------------------------------------
+TOTAL RECORDS: 56
+TOTAL AMOUNT:  697646.30
+*** END OF REPORT ***

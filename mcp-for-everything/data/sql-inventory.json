@@ -19,20 +19,92 @@
   },
   {
     "ProductId": 3,
-    "Name": "Widget C",
+    "Name": "Sprocket C",
+    "Category": "Sprockets",
+    "UnitPrice": 4.25,
+    "QuantityOnHand": 800,
+    "ReorderPoint": 500,
+    "NeedsReorder": false
+  },
+  {
+    "ProductId": 4,
+    "Name": "Widget Deluxe",
     "Category": "Widgets",
-    "UnitPrice": 14.99,
+    "UnitPrice": 19.99,
     "QuantityOnHand": 8,
     "ReorderPoint": 25,
     "NeedsReorder": true
   },
   {
-    "ProductId": 4,
-    "Name": "Sprocket D",
-    "Category": "Sprockets",
-    "UnitPrice": 149.0,
+    "ProductId": 5,
+    "Name": "Gadget Pro",
+    "Category": "Gadgets",
+    "UnitPrice": 89.0,
     "QuantityOnHand": 3,
     "ReorderPoint": 10,
     "NeedsReorder": true
+  },
+  {
+    "ProductId": 6,
+    "Name": "Sprocket Heavy Duty",
+    "Category": "Sprockets",
+    "UnitPrice": 12.5,
+    "QuantityOnHand": 60,
+    "ReorderPoint": 75,
+    "NeedsReorder": true
+  },
+  {
+    "ProductId": 7,
+    "Name": "Widget Mini",
+    "Category": "Widgets",
+    "UnitPrice": 3.49,
+    "QuantityOnHand": 1500,
+    "ReorderPoint": 1000,
+    "NeedsReorder": false
+  },
+  {
+    "ProductId": 8,
+    "Name": "Gadget Lite",
+    "Category": "Gadgets",
+    "UnitPrice": 14.99,
+    "QuantityOnHand": 22,
+    "ReorderPoint": 20,
+    "NeedsReorder": false
+  },
+  {
+    "ProductId": 9,
+    "Name": "Sprocket Titanium",
+    "Category": "Sprockets",
+    "UnitPrice": 48.0,
+    "QuantityOnHand": 2,
+    "ReorderPoint": 5,
+    "NeedsReorder": true
+  },
+  {
+    "ProductId": 10,
+    "Name": "Widget Industrial",
+    "Category": "Widgets",
+    "UnitPrice": 129.0,
+    "QuantityOnHand": 4,
+    "ReorderPoint": 2,
+    "NeedsReorder": false
+  },
+  {
+    "ProductId": 11,
+    "Name": "Gadget Wireless",
+    "Category": "Gadgets",
+    "UnitPrice": 59.99,
+    "QuantityOnHand": 0,
+    "ReorderPoint": 15,
+    "NeedsReorder": true
+  },
+  {
+    "ProductId": 12,
+    "Name": "Sprocket Nano",
+    "Category": "Sprockets",
+    "UnitPrice": 1.15,
+    "QuantityOnHand": 9000,
+    "ReorderPoint": 5000,
+    "NeedsReorder": false
   }
 ]

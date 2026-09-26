@@ -317,7 +317,7 @@ function demoDivider(n, name, source, ask, notes) {
     x: 3.95, y: 2.3, w: 2.1, h: 0.5, align: "center",
     fontFace: F.mono, fontSize: 13, bold: true, color: C.text, margin: 0,
   });
-  s.addText("lists the tools\nruns one\n~145 lines", {
+  s.addText("lists the tools\nruns one\n~125 lines", {
     x: 3.95, y: 2.9, w: 2.1, h: 1.3, align: "center",
     fontFace: F.body, fontSize: 12.5, color: C.muted, margin: 0,
   });

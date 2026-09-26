@@ -13,7 +13,7 @@ AI-callable tool: no SDK, no schema written by hand, no restart.
 ```
 VS Code Copilot ─┐
 Claude Desktop   ├─ MCP / Streamable HTTP ─► FastAPI + uvicorn ─► pwsh ─► your estate
-python client   ─┘                            (one 145-line file)  │
+python client   ─┘                            (one 126-line file)  │
                                                                   └─ tools/*.ps1
 ```
 
@@ -99,8 +99,9 @@ Save it in `powershell/tools/`. It's live.
 2. **Leave a blank line between `#requires` and `<#`.** Without it PowerShell silently
    stops parsing comment-based help and your tool ships with a useless description.
    `Get-ToolManifest.ps1` will warn you, and `Preflight.ps1` fails on it.
-3. **Use an approved read-only verb** (`Get`, `Read`, `Search`, `Find`, `Test`,
-   `Measure`) unless the tool really does change something — in which case declare
+3. **Use a read-only verb** (`Get`, `Read`, `Search`, `Find`, `Test`, `Measure`,
+   `Select`, `Show`, `Compare`, `Resolve`, `Trace`, `Convert`, `ConvertTo`,
+   `ConvertFrom`) unless the tool really does change something — in which case declare
    `[CmdletBinding(SupportsShouldProcess)]` and expect it to be hidden until you
    allowlist it.
 

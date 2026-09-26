@@ -2,9 +2,11 @@
 
 <#
 .SYNOPSIS
-    Parses the fixed-width nightly report that the mainframe has been dropping on
-    a file share since before some of this audience was born, and hands it back
-    as structured objects.
+    Parses the fixed-width nightly order report that the mainframe has been
+    dropping on a file share since before some of this audience was born, and
+    hands it back as structured objects. Each order carries a ProductId and
+    Quantity; ProductId is the same key Get-SqlInventory returns, so stock on hand
+    can be compared against held or open orders.
 
 .DESCRIPTION
     This is the demo that earns the word "Everything" in the session title.
@@ -24,6 +26,9 @@
 
 .PARAMETER MinAmount
     Only return rows at or above this amount.
+
+.PARAMETER ProductId
+    Only return orders for this product (the ProductId from Get-SqlInventory).
 #>
 [CmdletBinding()]
 param(
@@ -35,7 +40,11 @@ param(
     [string]$Status = 'All',
 
     [Parameter(HelpMessage = 'Minimum order amount')]
-    [double]$MinAmount = 0
+    [double]$MinAmount = 0,
+
+    [Parameter(HelpMessage = 'Only orders for this ProductId (0 = all)')]
+    [ValidateRange(0, 99999)]
+    [int]$ProductId = 0
 )
 
 if (-not (Test-Path -LiteralPath $Path)) {
@@ -51,12 +60,14 @@ $columns = @(
     @{ Name = 'Status'; Start = 48; Length = 10 }
     @{ Name = 'Amount'; Start = 58; Length = 12 }
     @{ Name = 'Region'; Start = 70; Length = 10 }
+    @{ Name = 'ProductId'; Start = 80; Length = 6 }
+    @{ Name = 'Quantity'; Start = 86; Length = 7 }
 )
 
 $rows = foreach ($line in (Get-Content -LiteralPath $Path)) {
-    # Skip headers, rulers, footers and blanks - the file has all four.
+    # Skip headers, rulers, footers, page breaks and blanks - the file has all of them.
     if ([string]::IsNullOrWhiteSpace($line)) { continue }
-    if ($line -match '^(ORDER ID|-{5,}|=|REPORT|TOTAL|PAGE)') { continue }
+    if ($line -match '^(ORDER ID|-{5,}|=|REPORT|TOTAL|PAGE|CONTINUED|\*{3})') { continue }
     if ($line.Length -lt 70) { continue }
 
     $record = [ordered]@{}
@@ -72,10 +83,13 @@ $rows = foreach ($line in (Get-Content -LiteralPath $Path)) {
         Status    = $record.Status
         Amount    = [double]($record.Amount -replace '[^\d.\-]', '')
         Region    = $record.Region
+        ProductId = [int]$record.ProductId
+        Quantity  = [int]$record.Quantity
     }
 }
 
 $rows |
     Where-Object { $Status -eq 'All' -or $_.Status -eq $Status } |
     Where-Object { $_.Amount -ge $MinAmount } |
+    Where-Object { $ProductId -eq 0 -or $_.ProductId -eq $ProductId } |
     Sort-Object Amount -Descending

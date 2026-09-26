@@ -207,7 +207,7 @@ response, show that nothing ran. Fencing is mitigation; the allowlist and the
 identity the host runs as are the boundary.
 
 **Audit log.** `Get-Content logs/audit.jsonl | ConvertFrom-Json | Format-Table`.
-Timestamp, tool, arguments, every call.
+Timestamp, tool, arguments, every completed call (timed-out calls are not logged).
 
 **Identity.** One sentence: the server runs as some account. That account's
 permissions are the real ceiling. Nothing in MCP changes that.
