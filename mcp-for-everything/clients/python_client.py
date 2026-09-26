@@ -1,7 +1,5 @@
 """
-Demo 6: the same MCP server, driven from plain Python instead of an editor.
-
-    python clients/python_client.py
+    .\host\.venv\Scripts\python.exe .\clients\python_client.py
 """
 
 import asyncio
