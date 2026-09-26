@@ -15,7 +15,7 @@
 //
 //  SECTION 0b - which function runs when (three swim lanes) and the function
 //              catalogue grouped by the question each one answers. Two slides.
-//  SECTION 1 - code walkthrough. Six slides that give the room a view into the
+//  SECTION 1 - code walkthrough. Six slides (C4 is three options - keep one) that give the room a view into the
 //              pipeline between demos. Every snippet is real code from this
 //              repo, trimmed to what fits on a projector. Line counts are
 //              measured, not estimated.
@@ -533,31 +533,139 @@ const d = kit.createDeck({ title: 'Smarter Monitoring - staging' });
 }
 
 // -----------------------------------------------------------------------------
-// C4. Same incident? - the code and the one idea behind it
+// C4. Same incident? - three options. Pick one, delete the other two.
+//     The old "Identity is derived, not invented" slide is gone: it showed the
+//     answer before anyone knew what the question was.
+//     Each option carries a small OPTION chip top right - delete it after pasting.
 // -----------------------------------------------------------------------------
+
+// Option A - no code. Four real alerts, one machine name, one incident.
 {
     const s = d.slide(
-        'Question two. Read the four lines top to bottom: host if there is one, otherwise the Azure resource, otherwise the service. Trace is last on purpose - every request has its own, so it is the worst thing to group on. Then the last line: the incident id is just a hash of that key. Same host, same id, every time. No lookup.'
+        'OPTION A - no code. Point at the right-hand column: every alert names the machine it is about. Two different tools, four different complaints, one machine name. That name is what groups them. No model, no lookup - it is a string match. If the room wants the fallback order (Azure resource, then app name), that is on the layer-two slide.'
     );
-    d.head(s, 'correlation.psm1  ·  is this the same incident?', 'Identity is derived, not invented');
+    d.head(s, 'is this the same incident?', 'Same machine, same incident');
+    d.chip(s, 10.78, 0.54, 1.9, 'option a · no code', C.DIM);
 
-    const h4 = d.codePanel(s, M, 1.95, CONTENT_W, null, null, [
-        ['function Get-PrimaryKey {', C.TXT],
-        ['    if ($Event.Host)       { return "host:$($Event.Host)" }             # a machine name', C.AMB],
-        ['    if ($Event.ResourceId) { return "resource:$($Event.ResourceId)" }   # an Azure resource', C.MUT],
-        ['    if ($Event.Service)    { return "service:$($Event.Service)" }       # a role, when there is no host', C.MUT],
-        ['    if ($Event.TraceId)    { return "trace:$($Event.TraceId)" }         # last: one per request', C.DIM],
-        ['}', C.TXT],
-        ['', C.MUT],
-        ['$incidentId = \'inc-\' + (Sha256 $primaryKey).Substring(0, 12)', C.GRN],
-    ], { size: 13 });
+    s.addText('Four alerts from two different tools. Every one of them names the machine it is about.', {
+        x: M, y: 1.62, w: CONTENT_W, h: 0.4, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 17, color: C.MUT });
 
-    d.callout(s, 1.95 + h4 + 0.35, [
-        { text: 'First match wins, and the id is a hash of it. ', options: { bold: true, color: C.GRN } },
-        { text: 'Four tools reporting sql-prod-03 all produce the same key, so they all produce the same incident id - ' +
-                'nothing is looked up, nothing is generated, nothing can drift. The same host always lands in the same incident.',
-          options: { color: C.TXT } },
-    ], { h: 1.3, size: 16 });
+    const top = 2.3, lw = 8.1, rowH = 0.62;
+    const alerts = [
+        ['storage-watch', 'Disk read latency 480 ms, sustained'],
+        ['storage-watch', 'Write queue depth 56, above threshold 8'],
+        ['sql-watch',     'Lock wait time 3100 ms on OrderLines'],
+        ['sql-watch',     'Connection pool exhausted, 100 of 100'],
+    ];
+    const lh = 0.55 + alerts.length * rowH + 0.15;
+    d.card(s, M, top, lw, lh);
+    [['TOOL', 0.3], ['ALERT', 1.9], ['MACHINE', 6.35]].forEach(([t, dx]) =>
+        s.addText(t, { x: M + dx, y: top + 0.2, w: 1.6, h: 0.25, isTextBox: true, margin: 0,
+            fontFace: SANS, fontSize: 10, bold: true, color: C.DIM, charSpacing: 1.5 }));
+    alerts.forEach((a, i) => {
+        const y = top + 0.55 + i * rowH;
+        s.addText(a[0], { x: M + 0.3, y, w: 1.55, h: 0.4, isTextBox: true, margin: 0, valign: 'middle',
+            fontFace: MONO, fontSize: 12, color: C.DIM });
+        s.addText(a[1], { x: M + 1.9, y, w: 4.4, h: 0.4, isTextBox: true, margin: 0, valign: 'middle',
+            fontFace: MONO, fontSize: 12, color: C.TXT });
+        s.addText('sql-prod-03', { x: M + 6.35, y, w: 1.6, h: 0.4, isTextBox: true, margin: 0, valign: 'middle',
+            fontFace: MONO, fontSize: 13, bold: true, color: C.AMB });
+    });
+
+    const rx = M + lw + 0.75, rw = M + CONTENT_W - rx;
+    d.arrow(s, M + lw + 0.12, top + lh / 2, 0.5, 'right', { color: C.AMB });
+    d.card(s, rx, top, rw, lh, C.PANEL2);
+    s.addText('ONE INCIDENT', { x: rx + 0.3, y: top + 0.2, w: rw - 0.6, h: 0.25, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 10, bold: true, color: C.DIM, charSpacing: 1.5 });
+    s.addText('sql-prod-03', { x: rx + 0.3, y: top + 0.75, w: rw - 0.6, h: 0.5, isTextBox: true, margin: 0,
+        fontFace: MONO, fontSize: 22, bold: true, color: C.AMB });
+    s.addText('4 symptoms  ·  2 tools', { x: rx + 0.3, y: top + 1.4, w: rw - 0.6, h: 0.35, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 16, color: C.TXT });
+    s.addText('grouped by the name alone', { x: rx + 0.3, y: top + 1.85, w: rw - 0.6, h: 0.35, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 14, italic: true, color: C.GRN });
+
+    d.callout(s, top + lh + 0.35, [
+        { text: 'Group by the machine name.  ', options: { bold: true, color: C.WHT } },
+        { text: 'Any alert that says sql-prod-03 lands in the sql-prod-03 incident, whichever tool sent it. ' +
+                'No model, no lookup table - a string match.', options: { color: C.MUT } },
+    ], { h: 1.0, size: 17 });
+}
+
+// Option B - follow one alert through the three steps. Real values throughout.
+{
+    const s = d.slide(
+        'OPTION B - follow one alert. Step one is a real alert from the demo. Step two: we pick the one label to group on - the machine name if the alert has one, otherwise the Azure resource, otherwise the app name. Step three: that label is hashed into the incident id. inc-de92ae29a9bb is the real id for sql-prod-03. The punchline is the callout: every other alert about that machine computes the same id, so it lands in the same incident without anyone searching for it.'
+    );
+    d.head(s, 'is this the same incident?', 'Follow one alert');
+    d.chip(s, 10.78, 0.54, 1.9, 'option b · walkthrough', C.DIM);
+
+    const steps = [
+        [C.BLU, 'An alert arrives',               'sql-watch  ·  Lock wait 3100 ms  ·  sql-prod-03', C.TXT,
+            'Tool, what went wrong, and which machine.'],
+        [C.AMB, 'Pick the label to group on',      'host:sql-prod-03', C.AMB,
+            'The machine name if it has one. Otherwise the Azure resource, then the app name.'],
+        [C.GRN, 'Turn the label into an id',       'inc-de92ae29a9bb', C.GRN,
+            'A hash of the label. Same label in, same id out - every time.'],
+    ];
+    const y0 = 1.8, h = 1.12, pitch = 1.3;
+    steps.forEach((st, i) => {
+        const y = y0 + i * pitch;
+        d.card(s, M, y, CONTENT_W, h);
+        d.badge(s, M + 0.32, y + (h - 0.52) / 2, 0.52, st[0], String(i + 1));
+        s.addText(st[1], { x: M + 1.05, y: y + 0.2, w: 4.2, h: 0.42, isTextBox: true, margin: 0,
+            fontFace: SANS, fontSize: 20, bold: true, color: C.TXT });
+        s.addText(st[4], { x: M + 1.05, y: y + 0.62, w: 4.4, h: 0.42, isTextBox: true, margin: 0, valign: 'top',
+            fontFace: SANS, fontSize: 12, color: C.MUT });
+        s.addText(st[2], { x: M + 5.6, y: y + 0.2, w: 6.2, h: h - 0.4, isTextBox: true, margin: 0, valign: 'middle',
+            fontFace: MONO, fontSize: i === 0 ? 15 : 20, bold: i > 0, color: st[3] });
+        if (i < steps.length - 1) d.arrow(s, M + 0.58, y + h + 0.02, 0.16, 'down', { color: C.DIM });
+    });
+
+    d.callout(s, y0 + steps.length * pitch + 0.1, [
+        { text: 'The next alert about sql-prod-03 - from any tool - computes ', options: { color: C.MUT } },
+        { text: 'inc-de92ae29a9bb', options: { bold: true, color: C.GRN, fontFace: MONO } },
+        { text: ' too.  ', options: { color: C.MUT } },
+        { text: 'Same incident, and nobody had to look anything up.', options: { bold: true, color: C.WHT } },
+    ], { h: 0.95, size: 17 });
+}
+
+// Option C - the code, but only after the question is on the screen.
+{
+    const s = d.slide(
+        'OPTION C - the code, set up first. Read the subtitle before touching the code: we do not search for an incident, we calculate its id. Two lines do it, and the comments show the real values. Then the two cards: different tools, different complaints, same id. Save the "why" for the callout - two workers handling alerts for the same machine at the same moment would both search, both miss and both create an incident. Calculating the id means they both write to the same row.'
+    );
+    d.head(s, 'correlation.psm1  ·  is this the same incident?', 'Calculate the incident, don\'t search for it');
+    d.chip(s, 10.78, 0.54, 1.9, 'option c · code', C.DIM);
+
+    s.addText('Every alert has to land in an incident. Instead of looking one up, we calculate its id from the alert itself.', {
+        x: M, y: 1.62, w: CONTENT_W, h: 0.4, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 17, color: C.MUT });
+
+    const ch = d.codePanel(s, M, 2.2, CONTENT_W, null, null, [
+        ['$key = Get-PrimaryKey $Event                     # "host:sql-prod-03"', C.AMB],
+        ['$id  = \'inc-\' + (Sha256 $key).Substring(0, 12)   # "inc-de92ae29a9bb"', C.GRN],
+    ], { size: 16 });
+
+    const cy = 2.2 + ch + 0.3, cw = (CONTENT_W - 0.4) / 2, cardH = 1.3;
+    [['storage-watch', 'Disk read latency 480 ms, sustained'],
+     ['sql-watch',     'Lock wait time 3100 ms on OrderLines']].forEach((c, i) => {
+        const x = M + i * (cw + 0.4);
+        d.card(s, x, cy, cw, cardH);
+        s.addText(c[0] + '  ·  sql-prod-03', { x: x + 0.3, y: cy + 0.18, w: cw - 0.6, h: 0.3, isTextBox: true, margin: 0,
+            fontFace: MONO, fontSize: 12, color: C.DIM });
+        s.addText(c[1], { x: x + 0.3, y: cy + 0.48, w: cw - 0.6, h: 0.3, isTextBox: true, margin: 0,
+            fontFace: MONO, fontSize: 12, color: C.TXT });
+        s.addText('->  inc-de92ae29a9bb', { x: x + 0.3, y: cy + 0.84, w: cw - 0.6, h: 0.32, isTextBox: true, margin: 0,
+            fontFace: MONO, fontSize: 15, bold: true, color: C.GRN });
+    });
+
+    d.callout(s, cy + cardH + 0.3, [
+        { text: 'Why calculate it?  ', options: { bold: true, color: C.WHT } },
+        { text: 'Two workers can handle alerts for the same machine at the same moment. If both searched for an open ' +
+                'incident, both would miss and both would create one. A calculated id means they both write to the same row.',
+          options: { color: C.MUT } },
+    ], { h: 1.05, size: 15 });
 }
 
 // -----------------------------------------------------------------------------
