@@ -19,7 +19,7 @@ param(
     [Parameter(Mandatory, HelpMessage = 'Who to greet')]
     [string]$Name,
 
-    [ValidateSet('Formal', 'Casual', 'Texan')]
+    [ValidateSet('Formal', 'Casual', 'Texan', 'Pirate')]
     [string]$Style = 'Casual',
 
     [ValidateRange(1, 5)]
@@ -29,6 +29,7 @@ param(
 $greeting = switch ($Style) {
     'Formal' { "Good day, $Name." }
     'Texan' { "Howdy, $Name! Welcome to the Cloud and AI Summit." }
+    'Pirate' { "Ahoy, $Name! Welcome to the Cloud and AI Summit." }
     default { "Hey $Name - welcome to MCP for Everything." }
 }
 
