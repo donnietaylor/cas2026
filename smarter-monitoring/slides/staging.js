@@ -940,4 +940,51 @@ d.imageSlide({
     notes: 'LAYOUT: image well. Drop the image over the grey box, then delete the box. The caption stays either way, so the slide still works if the image never turns up.',
 });
 
+// #############################################################################
+// SECTION 3 - CLOSING
+// #############################################################################
+
+// -----------------------------------------------------------------------------
+// T1. Thank you
+//     Bookends the title slide: same left-aligned stack, same three severity
+//     dots bottom right. Contact details sit here so the slide can stay up
+//     through the last questions.
+// -----------------------------------------------------------------------------
+{
+    const s = d.slide('Thank-you slide. Leave it up through the last questions so people can grab the links. The repo line is the one to point at: Deploy-Azure.ps1 builds the whole thing in their own subscription.');
+
+    s.addText('SMARTER MONITORING', {
+        x: M, y: 1.35, w: 11, h: 0.4, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 15, bold: true, color: C.AMB, charSpacing: 4 });
+    s.addText('Thank you', {
+        x: M, y: 1.8, w: 11.5, h: 1.1, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 60, bold: true, color: C.WHT });
+    s.addText('Donnie Taylor   ·   The Cloud & AI Summit 2026', {
+        x: M, y: 3.0, w: 10, h: 0.4, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 17, color: C.MUT });
+
+    const links = [
+        [C.GRN, 'github.com/donnietaylor', 'The code from today - Deploy-Azure.ps1 builds it in your tenant'],
+        [C.BLU, 'draith.com',              'Blog and write-ups'],
+        [C.AMB, 'donnietaylor.bsky.social', 'Also on LinkedIn: linkedin.com/in/donnietaylor'],
+    ];
+    const top = 3.95, pitch = 0.78;
+    d.card(s, M, top - 0.25, CONTENT_W, links.length * pitch + 0.3);
+    links.forEach((l, i) => {
+        const y = top + i * pitch;
+        d.dot(s, M + 0.35, y + 0.12, l[0], 0.24);
+        s.addText(l[1], { x: M + 0.85, y, w: 4.9, h: 0.48, isTextBox: true, margin: 0,
+            valign: 'middle', fontFace: SANS, fontSize: 20, bold: true, color: C.TXT });
+        s.addText(l[2], { x: M + 5.85, y, w: 5.9, h: 0.48, isTextBox: true, margin: 0,
+            valign: 'middle', fontFace: SANS, fontSize: 14, color: C.MUT });
+    });
+
+    s.addText('Questions - now, or find me afterwards.', {
+        x: M, y: 6.4, w: 9, h: 0.4, isTextBox: true, margin: 0,
+        fontFace: SANS, fontSize: 16, color: C.DIM, italic: true });
+
+    // The title slide's motif, closing the loop.
+    [C.RED, C.AMB, C.GRN].forEach((c, i) => d.dot(s, 11.64 + i * 0.42, 6.49, c, 0.22));
+}
+
 d.save('staging.pptx').then(f => console.log('wrote', f));
