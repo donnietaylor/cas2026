@@ -1,7 +1,6 @@
 """
 MCP for Everything - the entire Python host.
 
-This file is the whole thing. It does two things: 
 1 - Ask PowerShell what tools exist.
 2 - Run one of them.
 Every capability lives in ../powershell/tools/*.ps1.
